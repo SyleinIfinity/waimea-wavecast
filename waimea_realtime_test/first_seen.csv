@@ -1,3 +1,0 @@
-source,data_time_utc,first_seen_utc,status_change,type
-NOAA 51201,2026-11-01T04:56:00+00:00,2026-11-01T05:42:50.990918+00:00,INITIAL,observation
-Open-Meteo,2026-11-01T05:30:00+00:00,2026-11-01T05:42:52.745635+00:00,INITIAL,model
