@@ -2,6 +2,7 @@ import { useState } from 'react';
 import DashboardPage from './features/dashboard/DashboardPage';
 import ObservationsPage from './features/observations/ObservationsPage';
 import TimeSeriesPage from './features/time-series/TimeSeriesPage';
+import TrendPage from './features/trend/TrendPage';
 import CorrelationPage from './features/analysis/CorrelationPage';
 import ClusteringPage from './features/clustering/ClusteringPage';
 import ForecastPage from './features/forecast/ForecastPage';
@@ -21,6 +22,7 @@ import {
   Radio,
   TableProperties,
   ChartNoAxesCombined,
+  TrendingUpDown,
 } from 'lucide-react';
 
 export default function App() {
@@ -49,6 +51,13 @@ export default function App() {
           label: 'Time-Series Analytics',
           icon: ChartNoAxesCombined,
           desc: 'S03 · Daily / Weekly / Monthly',
+          highlight: false,
+        },
+        {
+          id: 'trend',
+          label: 'Trend & Seasonality',
+          icon: TrendingUpDown,
+          desc: 'S04 · Decomposition Analytics',
           highlight: false,
         },
       ],
@@ -272,6 +281,9 @@ export default function App() {
 
           {activeTab === 'time-series' && (
             <TimeSeriesPage />
+          )}
+          {activeTab === 'trend' && (
+            <TrendPage />
           )}
 
           {/* TL03: DATA MINING & FORECAST */}
