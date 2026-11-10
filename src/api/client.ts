@@ -30,7 +30,12 @@ import {
   mockPreviewDeleteResponse,
 } from './mockData';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || ''
+)
+  .replace(/\/+$/, '')
+  .replace(/\/api\/v1$/, '');
+  
 const USE_MOCK = !import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_USE_MOCK === 'true';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
