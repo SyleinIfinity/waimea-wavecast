@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from 'react'
 
 import {
@@ -11,7 +10,6 @@ import {
   Filter,
   RefreshCw,
   Waves,
-  WifiOff,
 } from 'lucide-react'
 
 import EChart from '../../components/charts/EChart'
@@ -38,25 +36,21 @@ const metrics: Record<
     field: 'wave_height_m',
     unit: 'm',
   },
-
   DPD: {
     label: 'Dominant Period',
     field: 'dominant_period_s',
     unit: 's',
   },
-
   APD: {
     label: 'Average Period',
     field: 'average_period_s',
     unit: 's',
   },
-
   MWD: {
     label: 'Wave Direction',
     field: 'wave_direction_deg',
     unit: '°',
   },
-
   WTMP: {
     label: 'Sea Temperature',
     field: 'sea_temperature_c',
@@ -101,7 +95,6 @@ function formatTime(
 
 function initialDates() {
   const end = new Date()
-
   const start = new Date(
     end.getTime() - 7 * 24 * 60 * 60 * 1000
   )
@@ -115,15 +108,9 @@ function initialDates() {
 export default function ObservationsPage() {
   const defaults = useMemo(initialDates, [])
 
-  // =========================
-  // FILTER STATES
-  // =========================
-
   const [start, setStart] = useState(defaults.start)
   const [end, setEnd] = useState(defaults.end)
-
   const [metric, setMetric] = useState<Metric>('WVHT')
-
   const [validOnly, setValidOnly] = useState(false)
 
   const [applied, setApplied] = useState({
@@ -131,35 +118,16 @@ export default function ObservationsPage() {
     end: defaults.end,
   })
 
-  // =========================
-  // PAGINATION STATES
-  // =========================
-
   const [page, setPage] = useState(1)
-
   const [cursor, setCursor] = useState('')
-
   const [cursorHistory, setCursorHistory] = useState<string[]>([])
-
   const [nextCursor, setNextCursor] = useState<string | null>(null)
 
-  // =========================
-  // DATA STATES
-  // =========================
-
   const [records, setRecords] = useState<Observation[]>([])
-
   const [loading, setLoading] = useState(true)
-
   const [error, setError] = useState<string | null>(null)
-
-  const [connected, setConnected] = useState(false)
-
+  const [isMock, setIsMock] = useState(false)
   const [reload, setReload] = useState(0)
-
-  // =========================
-  // FETCH BACKEND DATA
-  // =========================
 
   useEffect(() => {
     const controller = new AbortController()
@@ -167,7 +135,6 @@ export default function ObservationsPage() {
     async function fetchData() {
       setLoading(true)
       setError(null)
-      setConnected(false)
 
       try {
         const result = await getObservations(
@@ -186,7 +153,7 @@ export default function ObservationsPage() {
 
         setRecords(result.items)
         setNextCursor(result.nextCursor)
-        setConnected(true)
+        setIsMock(result.isMock)
       } catch (err: unknown) {
         if (controller.signal.aborted) {
           return
@@ -194,7 +161,7 @@ export default function ObservationsPage() {
 
         setRecords([])
         setNextCursor(null)
-        setConnected(false)
+        setIsMock(false)
 
         setError(
           err instanceof Error
@@ -213,13 +180,7 @@ export default function ObservationsPage() {
     return () => controller.abort()
   }, [applied, cursor, reload])
 
-  // =========================
-  // FILTER RECORDS
-  // =========================
-
   const visibleRecords = useMemo(() => {
-    // Giữ lại vị trí gốc để STT không bị sai
-    // khi lọc QC ở phía Frontend.
     const indexed = records.map((record, index) => ({
       record,
       originalIndex: index,
@@ -237,10 +198,6 @@ export default function ObservationsPage() {
 
   const selected = metrics[metric]
 
-  // =========================
-  // CHART DATA
-  // =========================
-
   const chartData = useMemo(() => {
     return [...visibleRecords]
       .map(({ record }) => record)
@@ -250,9 +207,7 @@ export default function ObservationsPage() {
         return (
           typeof value === 'number' &&
           Number.isFinite(value) &&
-          Number.isFinite(
-            Date.parse(record.observed_at)
-          )
+          Number.isFinite(Date.parse(record.observed_at))
         )
       })
       .sort(
@@ -265,62 +220,48 @@ export default function ObservationsPage() {
   const chartOptions = useMemo(
     () => ({
       backgroundColor: 'transparent',
-
       animationDuration: 350,
-
       grid: {
         left: 65,
         right: 30,
         top: 30,
         bottom: 75,
       },
-
       tooltip: {
         trigger: 'axis' as const,
       },
-
       xAxis: {
         type: 'category' as const,
-
         data: chartData.map(
           (record) => record.observed_at
         ),
-
         axisLabel: {
           color: '#94b5c9',
           hideOverlap: true,
-
           formatter: (value: string) =>
             formatTime(value, 'Pacific/Honolulu'),
         },
-
         axisLine: {
           lineStyle: {
             color: '#31556b',
           },
         },
       },
-
       yAxis: {
         type: 'value' as const,
-
         name: selected.unit,
-
         nameTextStyle: {
           color: '#94b5c9',
         },
-
         axisLabel: {
           color: '#94b5c9',
         },
-
         splitLine: {
           lineStyle: {
             color: '#203b50',
           },
         },
       },
-
       dataZoom: [
         {
           type: 'inside' as const,
@@ -330,45 +271,31 @@ export default function ObservationsPage() {
           bottom: 10,
         },
       ],
-
       series: [
         {
           name: `${metric} (${selected.unit})`,
-
           type: 'line' as const,
-
           smooth: metric !== 'MWD',
-
           connectNulls: false,
-
           showSymbol: chartData.length < 30,
-
           itemStyle: {
             color: '#22d3ee',
           },
-
           lineStyle: {
             width: 3,
           },
-
           areaStyle:
             metric === 'MWD'
               ? undefined
               : { opacity: 0.08 },
-
           data: chartData.map(
-            (record) =>
-              record[selected.field] as number
+            (record) => record[selected.field] as number
           ),
         },
       ],
     }),
     [chartData, metric, selected]
   )
-
-  // =========================
-  // FILTER ACTIONS
-  // =========================
 
   function applyFilters() {
     if (!start || !end || start > end) {
@@ -381,35 +308,25 @@ export default function ObservationsPage() {
     setPage(1)
     setCursor('')
     setCursorHistory([])
-
     setApplied({ start, end })
-
     setReload((value) => value + 1)
   }
 
   function resetFilters() {
     setStart(defaults.start)
     setEnd(defaults.end)
-
     setMetric('WVHT')
     setValidOnly(false)
-
     setPage(1)
     setCursor('')
     setCursorHistory([])
-
     setApplied({ ...defaults })
-
     setReload((value) => value + 1)
   }
 
   function refreshData() {
     setReload((value) => value + 1)
   }
-
-  // =========================
-  // PAGINATION ACTIONS
-  // =========================
 
   function goToNextPage() {
     if (!nextCursor || loading) {
@@ -422,7 +339,6 @@ export default function ObservationsPage() {
     ])
 
     setCursor(nextCursor)
-
     setPage((current) => current + 1)
   }
 
@@ -439,13 +355,8 @@ export default function ObservationsPage() {
     )
 
     setCursor(previousCursor)
-
     setPage((current) => current - 1)
   }
-
-  // =========================
-  // CSV EXPORT
-  // =========================
 
   function exportCSV() {
     if (visibleRecords.length === 0) {
@@ -467,8 +378,6 @@ export default function ObservationsPage() {
 
     function csvCell(value: unknown): string {
       const raw = String(value ?? '')
-
-      // Tránh Excel diễn giải dữ liệu dạng công thức.
       const safe = /^[=+\-@\t\r]/.test(raw)
         ? `'${raw}`
         : raw
@@ -513,24 +422,14 @@ export default function ObservationsPage() {
     )
 
     const url = URL.createObjectURL(blob)
-
     const link = document.createElement('a')
-
     link.href = url
-    link.download =
-      `waimea-observations-page-${page}.csv`
-
+    link.download = `waimea-observations-page-${page}.csv`
     document.body.appendChild(link)
-
     link.click()
     link.remove()
-
     URL.revokeObjectURL(url)
   }
-
-  // =========================
-  // STYLES
-  // =========================
 
   const inputClass =
     'w-full rounded-xl border border-[#31556b] ' +
@@ -543,16 +442,9 @@ export default function ObservationsPage() {
     'hover:bg-[#193b51] ' +
     'disabled:cursor-not-allowed disabled:opacity-30'
 
-  // =========================
-  // UI
-  // =========================
-
   return (
     <div className="w-full min-w-0 space-y-6 text-slate-100">
-
-      {/* ================= HEADER ================= */}
       <section className="rounded-2xl border border-[#28516a] bg-[#102d43] p-6">
-
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-400">
           <Waves size={17} />
           S02 · NOAA Station 51201
@@ -565,52 +457,46 @@ export default function ObservationsPage() {
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
           Khám phá dữ liệu quan trắc sóng biển,
           phân tích biến động theo thời gian và
-          theo dõi chất lượng dữ liệu từ Backend.
+          theo dõi chất lượng dữ liệu.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-
           <span className="rounded-lg bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300">
             NOAA 51201 · Waimea Bay
           </span>
 
           <span
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-              connected
-                ? 'bg-emerald-500/10 text-emerald-300'
-                : 'bg-amber-500/10 text-amber-300'
+              loading
+                ? 'bg-slate-500/10 text-slate-300'
+                : isMock
+                  ? 'bg-amber-500/10 text-amber-300'
+                  : 'bg-emerald-500/10 text-emerald-300'
             }`}
           >
             {loading
-              ? 'CONNECTING...'
-              : connected
-                ? 'BACKEND CONNECTED'
-                : 'BACKEND NOT CONNECTED'}
+              ? 'LOADING...'
+              : isMock
+                ? 'MOCK DATA MODE'
+                : 'BACKEND MODE'}
           </span>
 
           <span className="rounded-lg bg-[#17384d] px-3 py-1.5 text-xs text-slate-300">
             UTC Filters · HST Display
           </span>
-
         </div>
-
       </section>
 
-      {/* ================= FILTERS ================= */}
       <section className="rounded-2xl border border-[#28516a] bg-[#10283c] p-5">
-
         <div className="mb-5 flex items-center gap-2">
           <Filter size={18} className="text-cyan-400" />
-
           <h2 className="font-bold text-white">
             Bộ lọc dữ liệu quan trắc
           </h2>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-
           <label className="space-y-2">
-
             <span className="flex items-center gap-2 text-xs text-slate-400">
               <CalendarDays size={14} />
               Từ ngày (UTC)
@@ -624,11 +510,9 @@ export default function ObservationsPage() {
               }
               className={inputClass}
             />
-
           </label>
 
           <label className="space-y-2">
-
             <span className="text-xs text-slate-400">
               Đến ngày (UTC)
             </span>
@@ -641,11 +525,9 @@ export default function ObservationsPage() {
               }
               className={inputClass}
             />
-
           </label>
 
           <label className="space-y-2">
-
             <span className="text-xs text-slate-400">
               Chỉ số quan trắc
             </span>
@@ -659,7 +541,6 @@ export default function ObservationsPage() {
               }
               className={inputClass}
             >
-
               {Object.entries(metrics).map(
                 ([key, value]) => (
                   <option key={key} value={key}>
@@ -667,15 +548,11 @@ export default function ObservationsPage() {
                   </option>
                 )
               )}
-
             </select>
-
           </label>
-
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-
           <button
             type="button"
             onClick={applyFilters}
@@ -703,7 +580,6 @@ export default function ObservationsPage() {
           </button>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
-
             <input
               type="checkbox"
               checked={validOnly}
@@ -712,70 +588,45 @@ export default function ObservationsPage() {
               }
               className="accent-cyan-400"
             />
-
             Chỉ bản ghi QC valid
-
           </label>
-
         </div>
 
         <p className="mt-4 text-xs text-slate-500">
-          Bộ lọc QC hiện áp dụng cho dữ liệu
-          của trang đã tải từ Backend.
+          Khi đang ở Mock Mode, dữ liệu hiển thị chỉ phục vụ demo giao diện và kiểm thử chức năng.
         </p>
-
       </section>
 
-      {/* ================= ERROR ================= */}
       {error && (
         <section
           role="alert"
-          className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-5"
+          className="rounded-xl border border-red-500/30 bg-red-500/10 p-5"
         >
-          <WifiOff
-            size={20}
-            className="mt-0.5 shrink-0 text-amber-300"
-          />
+          <h3 className="font-semibold text-red-300">
+            Không thể tải dữ liệu quan trắc
+          </h3>
 
-          <div>
-            <h3 className="font-semibold text-amber-200">
-              Chưa thể tải dữ liệu từ Backend
-            </h3>
-
-            <p className="mt-1 text-sm leading-6 text-amber-100/80">
-              {error}
-            </p>
-
-            <p className="mt-2 text-xs text-slate-400">
-              Frontend không sử dụng dữ liệu
-              mô phỏng. Khi Backend hoàn thành,
-              cấu hình API để tải dữ liệu thật.
-            </p>
-          </div>
+          <p className="mt-2 text-sm leading-6 text-red-200/80">
+            {error}
+          </p>
         </section>
       )}
 
-      {/* ================= CHART ================= */}
       <section className="rounded-2xl border border-[#28516a] bg-[#10283c] p-5">
-
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-
           <div>
             <div className="flex items-center gap-2">
               <Activity
                 size={18}
                 className="text-cyan-400"
               />
-
               <h2 className="text-lg font-bold text-white">
                 Time-Series Visualization
               </h2>
             </div>
 
             <p className="mt-1 text-xs text-slate-400">
-              {metric} · {selected.label} ·
-              {' '}{selected.unit} ·
-              {' '}Giờ Hawaii (HST)
+              {metric} · {selected.label} · {selected.unit} · Giờ Hawaii (HST)
             </p>
           </div>
 
@@ -784,24 +635,17 @@ export default function ObservationsPage() {
               size={14}
               className="mr-1 inline"
             />
-
             {visibleRecords.length} bản ghi
           </span>
-
         </div>
 
         {loading ? (
-
           <div className="h-72 animate-pulse rounded-xl bg-[#193b50]" />
-
         ) : chartData.length >= 2 ? (
-
           <>
             {metric === 'MWD' && (
               <p className="mb-3 text-xs text-amber-300">
-                MWD là dữ liệu góc 0°–360°.
-                Cần xử lý đặc biệt khi phân tích
-                hướng sóng qua ranh giới 0°/360°.
+                MWD là dữ liệu góc 0°–360°. Cần xử lý đặc biệt khi phân tích hướng sóng qua ranh giới 0°/360°.
               </p>
             )}
 
@@ -810,11 +654,8 @@ export default function ObservationsPage() {
               height={340}
             />
           </>
-
         ) : (
-
           <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-[#31556b] bg-[#091f30] px-5 text-center">
-
             <Waves
               size={30}
               className="mb-3 text-cyan-400"
@@ -825,38 +666,25 @@ export default function ObservationsPage() {
             </p>
 
             <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-              Biểu đồ yêu cầu ít nhất hai
-              bản ghi quan trắc có giá trị hợp lệ.
-              Dữ liệu sẽ xuất hiện khi Backend
-              cung cấp các quan trắc thực tế.
+              Biểu đồ yêu cầu ít nhất hai bản ghi quan trắc có giá trị hợp lệ.
             </p>
-
           </div>
-
         )}
 
         <p className="mt-3 text-xs text-slate-500">
-          Biểu đồ sử dụng dữ liệu của trang
-          hiện tại, không đại diện cho toàn bộ
-          lịch sử quan trắc.
+          Biểu đồ sử dụng dữ liệu của trang hiện tại, không đại diện cho toàn bộ lịch sử quan trắc.
         </p>
-
       </section>
 
-      {/* ================= OBSERVATION TABLE ================= */}
       <section className="rounded-2xl border border-[#28516a] bg-[#10283c] p-5">
-
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-
           <div>
             <h2 className="text-lg font-bold text-white">
               Observation Records
             </h2>
 
             <p className="mt-1 text-xs text-slate-400">
-              Danh sách quan trắc ·
-              {' '}Trang {page} ·
-              {' '}{visibleRecords.length} bản ghi hiển thị
+              Danh sách quan trắc · Trang {page} · {visibleRecords.length} bản ghi hiển thị
             </p>
           </div>
 
@@ -872,19 +700,12 @@ export default function ObservationsPage() {
             <Download size={16} />
             Tải CSV trang này
           </button>
-
         </div>
 
-        {/* TABLE SCROLL CONTAINER */}
         <div className="overflow-x-auto rounded-xl border border-[#28516a]">
-
           <table className="w-full min-w-[1150px] border-collapse text-left text-xs">
-
-            {/* TABLE HEADER */}
             <thead className="bg-[#091e30] uppercase text-slate-400">
-
               <tr>
-
                 {[
                   'STT',
                   'UTC',
@@ -898,7 +719,6 @@ export default function ObservationsPage() {
                   'QC',
                   'Revision',
                 ].map((heading, index) => (
-
                   <th
                     key={heading}
                     scope="col"
@@ -910,16 +730,11 @@ export default function ObservationsPage() {
                   >
                     {heading}
                   </th>
-
                 ))}
-
               </tr>
-
             </thead>
 
-            {/* TABLE BODY */}
             <tbody>
-
               {loading && (
                 <tr>
                   <td
@@ -930,7 +745,6 @@ export default function ObservationsPage() {
                       size={20}
                       className="mx-auto mb-3 animate-spin text-cyan-400"
                     />
-
                     Đang tải dữ liệu quan trắc...
                   </td>
                 </tr>
@@ -947,9 +761,8 @@ export default function ObservationsPage() {
                         size={28}
                         className="mx-auto mb-3 text-cyan-400/60"
                       />
-
                       {error
-                        ? 'Chưa thể tải bản ghi từ Backend.'
+                        ? 'Chưa thể tải bản ghi.'
                         : 'Không có bản ghi phù hợp với bộ lọc.'}
                     </td>
                   </tr>
@@ -958,11 +771,6 @@ export default function ObservationsPage() {
               {!loading &&
                 visibleRecords.map(
                   ({ record, originalIndex }) => {
-
-                    // STT liên tục giữa các trang:
-                    // Trang 1: 1-20
-                    // Trang 2: 21-40
-                    // Trang 3: 41-60
                     const stt =
                       (page - 1) * PAGE_SIZE +
                       originalIndex +
@@ -973,13 +781,10 @@ export default function ObservationsPage() {
                         key={`${record.observed_at}-${originalIndex}`}
                         className="group border-t border-[#24455d] odd:bg-[#10283c] even:bg-[#0c2235] hover:bg-[#16364b]"
                       >
-
-                        {/* STT - STICKY COLUMN */}
                         <td className="sticky left-0 z-10 border-r border-[#28516a] bg-[#10283c] px-4 py-3 text-center font-bold tabular-nums text-cyan-300 group-even:bg-[#0c2235] group-hover:bg-[#16364b]">
                           {stt}
                         </td>
 
-                        {/* UTC */}
                         <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-200">
                           {formatTime(
                             record.observed_at,
@@ -987,7 +792,6 @@ export default function ObservationsPage() {
                           )}
                         </td>
 
-                        {/* HST */}
                         <td className="whitespace-nowrap px-4 py-3 text-slate-300">
                           {formatTime(
                             record.observed_at,
@@ -995,42 +799,36 @@ export default function ObservationsPage() {
                           )}
                         </td>
 
-                        {/* WVHT */}
                         <td className="px-4 py-3 font-semibold tabular-nums text-white">
                           {formatNumber(
                             record.wave_height_m
                           )}
                         </td>
 
-                        {/* DPD */}
                         <td className="px-4 py-3 font-semibold tabular-nums text-white">
                           {formatNumber(
                             record.dominant_period_s
                           )}
                         </td>
 
-                        {/* APD */}
                         <td className="px-4 py-3 font-semibold tabular-nums text-white">
                           {formatNumber(
                             record.average_period_s
                           )}
                         </td>
 
-                        {/* MWD */}
                         <td className="px-4 py-3 font-semibold tabular-nums text-white">
                           {formatNumber(
                             record.wave_direction_deg
                           )}
                         </td>
 
-                        {/* WTMP */}
                         <td className="px-4 py-3 font-semibold tabular-nums text-white">
                           {formatNumber(
                             record.sea_temperature_c
                           )}
                         </td>
 
-                        {/* SOURCE */}
                         <td
                           className="max-w-44 truncate px-4 py-3 text-slate-300"
                           title={record.source}
@@ -1038,9 +836,7 @@ export default function ObservationsPage() {
                           {record.source}
                         </td>
 
-                        {/* QUALITY CONTROL */}
                         <td className="px-4 py-3">
-
                           <span
                             className={`inline-block rounded-md px-2 py-1 font-semibold ${
                               record.quality_flag.toLowerCase() === 'valid'
@@ -1052,32 +848,23 @@ export default function ObservationsPage() {
                           >
                             {record.quality_flag}
                           </span>
-
                         </td>
 
-                        {/* REVISION */}
                         <td className="px-4 py-3 text-center tabular-nums text-slate-300">
                           {formatNumber(
                             record.revision_no
                           )}
                         </td>
-
                       </tr>
                     )
                   }
                 )}
-
             </tbody>
-
           </table>
-
         </div>
 
-        {/* ================= PAGINATION ================= */}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-
           <div className="space-y-1">
-
             <p className="text-sm font-medium text-slate-300">
               Trang {page}
             </p>
@@ -1085,12 +872,9 @@ export default function ObservationsPage() {
             <p className="text-xs text-slate-500">
               Tối đa {PAGE_SIZE} bản ghi mỗi trang
             </p>
-
           </div>
 
           <div className="flex items-center gap-2">
-
-            {/* PREVIOUS PAGE */}
             <button
               type="button"
               onClick={goToPreviousPage}
@@ -1101,12 +885,10 @@ export default function ObservationsPage() {
               Trước
             </button>
 
-            {/* CURRENT PAGE */}
             <span className="flex h-10 min-w-10 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 text-sm font-bold text-cyan-300">
               {page}
             </span>
 
-            {/* NEXT PAGE */}
             <button
               type="button"
               onClick={goToNextPage}
@@ -1116,21 +898,14 @@ export default function ObservationsPage() {
               Tiếp
               <ChevronRight size={16} />
             </button>
-
           </div>
-
         </div>
 
         <p className="mt-4 text-xs leading-5 text-slate-500">
-          STT được đánh liên tục theo vị trí bản ghi
-          trên các trang tải từ Backend.
-          Bộ lọc QC hiện chỉ ẩn các dòng không phù hợp
-          trong trang đang xem, nên STT có thể
-          không liền nhau khi bật bộ lọc.
+          STT được đánh theo vị trí bản ghi trên từng trang dữ liệu đã tải.
+          Khi bật bộ lọc QC valid, một số số thứ tự có thể không liền nhau vì việc lọc đang diễn ra ở phía Frontend.
         </p>
-
       </section>
-
     </div>
   )
 }
