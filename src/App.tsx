@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import DashboardPage from './features/dashboard/DashboardPage';
 import ObservationsPage from './features/observations/ObservationsPage';
+import TimeSeriesPage from './features/time-series/TimeSeriesPage';
 import CorrelationPage from './features/analysis/CorrelationPage';
 import ClusteringPage from './features/clustering/ClusteringPage';
 import ForecastPage from './features/forecast/ForecastPage';
@@ -19,6 +20,7 @@ import {
   Compass,
   Radio,
   TableProperties,
+  ChartNoAxesCombined,
 } from 'lucide-react';
 
 export default function App() {
@@ -40,6 +42,13 @@ export default function App() {
           label: 'Observations Explorer',
           icon: TableProperties,
           desc: 'S02 · Dữ liệu quan trắc sóng',
+          highlight: false,
+        },
+        {
+          id: 'time-series',
+          label: 'Time-Series Analytics',
+          icon: ChartNoAxesCombined,
+          desc: 'S03 · Daily / Weekly / Monthly',
           highlight: false,
         },
       ],
@@ -259,6 +268,10 @@ export default function App() {
 
           {activeTab === 'observations' && (
             <ObservationsPage />
+          )}
+
+          {activeTab === 'time-series' && (
+            <TimeSeriesPage />
           )}
 
           {/* TL03: DATA MINING & FORECAST */}
