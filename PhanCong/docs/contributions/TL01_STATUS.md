@@ -2,27 +2,27 @@
 
 **Người thực hiện:** Trần Văn Thọ Khang
 
-**Nhánh Git:** feature/tl01_db_api
+**Nhánh Git:** `feature/tl01-db-api`
 
-**Commit / Pull Request:** https://github.com/SyleinIfinity/waimea-wavecast/tree/feature/tl01-db-api
-
-**Ngày cập nhật:** 10/11/2026
+**Commit / Pull Request:** Chưa tạo PR cho phần code mới.
+**Ngày cập nhật:** 11/11/2026
 
 | Task ID | Trạng thái | Code path | Test command/result | Ghi chú/blocker |
 |---|---|---|---|---|
-| TL01-01 | PARTIAL | `DB-review/01_init_full.sql`; `DB-review/03_verify.sql` | DBeaver: chạy toàn bộ `03_verify.sql` trên `waimea_wavecast` — PASS | Đã khởi tạo và xác minh schema trên PostgreSQL 17.11. Chưa đưa migration vào `database/migrations/`, chưa viết database README, repositories, DB connection/session, DTO hoặc contract fixtures. |
-| TL01-02 | NOT_STARTED | — | Chưa chạy | Chưa triển khai |
-| TL01-03 | PARTIAL | `DB-review/03_verify.sql`; `PhanCong/docs/contributions/TL01_STATUS.md`; `PhanCong/docs/contributions/TL01_FUNCTIONS.md` | DBeaver: `03_verify.sql` báo `PASS: Waimea v2 required tables, seed metadata and evaluation view exist` | Đã verify DDL trên PostgreSQL 17.11. Chưa có integration tests cho migrations/upsert, test API, PR hoặc kiểm thử độc lập đầy đủ. |
+| TL01-01 | DONE (độc lập) | `database/migrations/`; `database/README.md`; `apps/database_api/app/db/`; `app/repositories/`; `app/schemas/`; `contracts/` | `scripts.inspect_db`: PostgreSQL 17.11, Bronze 6/Silver 5/Gold 14, 5 views, 2 revision triggers. SHA-256 migration trùng SQL đã dùng. `scripts.rollback_integration`: PASS, ROLLBACK. | Đã có pool, transaction, repository, DTO, OpenAPI và fixture. |
+| TL01-02 | DONE (độc lập với mock worker) | `apps/database_api/app/api/{public,internal,admin}.py`; `app/main.py`; `Dockerfile`; `deploy/integration/` | `scripts.smoke_read`: 19 GET routes/health PASS trên DB thật; `scripts.http_rollback`: POST Bronze/Silver/Gold, GET NOAA/Gold, cursor và ML promotion PASS, ROLLBACK; `pytest`: 9 PASS; `docker-compose config -q`: PASS. | Admin xóa Gold có staging/backup flag, preview 1 lần, xác thực, giới hạn bảng/ngày; production bị chặn. Worker rebuild đã test bằng mock, chưa có TL04/TL05 thật để thử liên dịch vụ. |
+| TL01-03 | PARTIAL | `apps/database_api/tests/`; `apps/database_api/scripts/`; hai báo cáo TL01 | Unit/API pytest: 9 PASS; `pytest tests/integration`: 2 PASS trên PostgreSQL 17.11; HTTP rollback và smoke GET: PASS. | Chưa chạy Docker build (Docker daemon không hoạt động trong môi trường này), chưa có PR và chưa chạy tích hợp thật với TL04/TL05/Frontend. |
 
-## API / dữ liệu còn thiếu để tích hợp
+## Kết quả dữ liệu và tích hợp
 
-- Database API, repositories, DTO/contract fixtures và endpoint chưa triển khai.
-- Chưa có dữ liệu quan trắc NOAA; SQL khởi tạo chỉ tạo cấu trúc và metadata.
+- Database hiện có schema/metadata của NOAA 51201; chưa thấy quan trắc, Gold patterns hay model trong các smoke GET. Không ghi dữ liệu fixture vào DB: mọi kiểm thử ghi dùng transaction `ROLLBACK`.
+- Giao diện `/internal/v1` đã có các thao tác cho worker; TL04/TL05 cần dùng token và `Idempotency-Key`, sau đó chạy checklist I-01/I-02 với worker thật.
+- Admin rebuild chuyển yêu cầu đến worker qua HTTP và chỉ trả `202` khi worker chấp nhận; chưa chứng minh job thật hoàn thành.
+- Không chạy thao tác xóa Gold thật. Kiểm thử guard/preview/delete chỉ dùng fake DB; trước demo cần staging, backup và đối chiếu quyền DELETE.
+- `PhanCong/docs/STATUS_REPORT.md` là bản tổng hợp mẫu cũ, cần sinh lại sau khi báo cáo của các thành viên được chốt.
 
 ## Kết luận bàn giao
 
-- Tổng số task `DONE`: 0/3; `PARTIAL`: 2/3.
-- Xác minh khởi tạo database: PASS theo `DB-review/03_verify.sql`.
-- Build/test độc lập: CHƯA KIỂM CHỨNG (ngoại trừ DDL verify nêu trên).
-- Kiểm tra secrets/mock trong production: CHƯA KIỂM CHỨNG.
-- Việc còn lại trước khi bàn giao TL01 đầy đủ: triển khai các mục còn thiếu trong TL01-01/02/03 và ghi kết quả test thật.
+- TL01 độc lập: `DONE` 2/3 task; `PARTIAL` 1/3 do Docker/PR/tích hợp cuối.
+- Không có secret thật hoặc fixture NOAA giả được ghi vào source code; credential chỉ được truyền qua môi trường khi kiểm thử.
+- Các bước còn lại để nghiệm thu cuối: Docker build/run, kiểm thử với TL04/TL05 và frontend, chạy demo staging, tạo PR và xác nhận log tích hợp.
