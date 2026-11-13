@@ -3,29 +3,67 @@
 @layer base {
   :root {
     color-scheme: dark;
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
+
   body {
-    background-color: #071e32;
-    color: #e6f3ff;
+    background-color: #04090e;
+    color: #e2e8f0;
+    font-family: var(--font-sans);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Surface Card Styles */
+.glass-panel {
+  background: #09131d;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+}
+
+.glass-panel-subtle {
+  background: #070e16;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(6, 182, 212, 0.35);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.6);
+}
+
+/* Precision Hairline Separator */
+.hairline-b {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hairline-t {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.hairline-r {
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #071e32;
+  background: #04090e;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #1b3d54;
-  border-radius: 4px;
+  background: #1e293b;
+  border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #2b5573;
+  background: #334155;
 }

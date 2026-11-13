@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getCorrelationMatrix, getScatterData } from '../../api/client';
 import type { CorrelationMatrix, ScatterPoint } from '../../api/types';
 import EChart from '../../components/charts/EChart';
-import { Grid, Sparkles, X, Info, Activity } from 'lucide-react';
+import { Grid, Activity, Info, Sparkles } from 'lucide-react';
 import type { EChartsOption } from 'echarts';
 
 const VARIABLE_NAMES: Record<string, string> = {
@@ -40,16 +40,15 @@ export default function CorrelationPage() {
 
   if (loading || !matrixData) {
     return (
-      <div className="p-8 text-center text-cyan-200">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mb-4"></div>
-        <p>Đang tính toán ma trận tương quan giữa các biến hải dương...</p>
+      <div className="py-20 text-center text-slate-400">
+        <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-cyan-400 border-t-transparent mb-3"></div>
+        <div className="text-xs font-mono">Đang tính ma trận tương quan đa biến...</div>
       </div>
     );
   }
 
   const { variables, matrix } = matrixData;
 
-  // Cấu hình ECharts Heatmap
   const heatmapData: Array<[number, number, number]> = [];
   matrix.forEach((row, i) => {
     row.forEach((cell, j) => {
@@ -60,34 +59,36 @@ export default function CorrelationPage() {
   const heatmapOptions: EChartsOption = {
     tooltip: {
       position: 'top',
-      backgroundColor: '#0c2438',
-      borderColor: '#2b5268',
-      textStyle: { color: '#e6f3ff' },
+      backgroundColor: '#07121c',
+      borderColor: 'rgba(255,255,255,0.1)',
+      borderWidth: 1,
+      textStyle: { color: '#f1f5f9', fontSize: 12 },
       formatter: (params: unknown) => {
         const p = params as { value: [number, number, number] };
         const v1 = variables[p.value[1]];
         const v2 = variables[p.value[0]];
         const cell = matrix[p.value[1]][p.value[0]];
-        return `<div class="p-1 text-xs">
-          <div class="font-bold text-cyan-300">${v1} ↔ ${v2}</div>
-          <div class="mt-1">Hệ số r: <strong>${cell.coefficient?.toFixed(2) ?? 'N/A'}</strong></div>
-          <div class="text-gray-400">Số mẫu cặp: <strong>${cell.paired_sample_count.toLocaleString()}</strong></div>
-          <div class="text-[10px] text-gray-500 mt-1">Click để xem phân tán (Scatter)</div>
+        return `<div class="p-1 font-mono text-xs">
+          <div class="font-bold text-cyan-400 pb-1 mb-1 border-b border-white/[0.08]">${v1} ↔ ${v2}</div>
+          <div>Hệ số r: <strong class="text-white">${cell.coefficient?.toFixed(2) ?? 'N/A'}</strong></div>
+          <div class="text-slate-400 text-[11px] mt-0.5">Số mẫu cặp: ${cell.paired_sample_count.toLocaleString()}</div>
         </div>`;
       },
     },
-    grid: { left: '10%', right: '8%', bottom: '15%', top: '10%' },
+    grid: { left: '8%', right: '4%', bottom: '18%', top: '8%' },
     xAxis: {
       type: 'category',
       data: variables,
-      splitArea: { show: true },
-      axisLabel: { color: '#adc7d9', fontWeight: 'bold' },
+      splitArea: { show: false },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 },
     },
     yAxis: {
       type: 'category',
       data: variables,
-      splitArea: { show: true },
-      axisLabel: { color: '#adc7d9', fontWeight: 'bold' },
+      splitArea: { show: false },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 },
     },
     visualMap: {
       min: -1,
@@ -97,9 +98,9 @@ export default function CorrelationPage() {
       left: 'center',
       bottom: '0%',
       inRange: {
-        color: ['#ef4444', '#1e293b', '#06b6d4', '#3b82f6'],
+        color: ['#e11d48', '#1e293b', '#06b6d4', '#3b82f6'],
       },
-      textStyle: { color: '#9fbcd0' },
+      textStyle: { color: '#64748b', fontSize: 10, fontFamily: 'monospace' },
     },
     series: [
       {
@@ -109,57 +110,52 @@ export default function CorrelationPage() {
         label: {
           show: true,
           color: '#ffffff',
+          fontFamily: 'monospace',
+          fontSize: 11,
           formatter: (p: unknown) => {
             const item = p as { value: [number, number, number] };
             return item.value[2].toFixed(2);
-          },
-        },
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
           },
         },
       },
     ],
   };
 
-  // Cấu hình Scatter Plot cho cặp biến đang chọn
   const scatterOptions: EChartsOption = {
     tooltip: {
-      backgroundColor: '#0c2438',
-      borderColor: '#2b5268',
-      textStyle: { color: '#e6f3ff' },
+      backgroundColor: '#07121c',
+      borderColor: 'rgba(255,255,255,0.1)',
+      textStyle: { color: '#f1f5f9' },
       formatter: (p: unknown) => {
         const pt = p as { value: [number, number] };
-        return `<div class="text-xs">
-          <div>${selectedPair?.var1}: <strong>${pt.value[0]}</strong></div>
-          <div>${selectedPair?.var2}: <strong>${pt.value[1]}</strong></div>
+        return `<div class="text-xs font-mono p-1">
+          <div>${selectedPair?.var1}: <strong class="text-white">${pt.value[0]}</strong></div>
+          <div>${selectedPair?.var2}: <strong class="text-cyan-400">${pt.value[1]}</strong></div>
         </div>`;
       },
     },
-    grid: { left: '8%', right: '8%', bottom: '10%', top: '12%', containLabel: true },
+    grid: { left: '4%', right: '4%', bottom: '8%', top: '12%', containLabel: true },
     xAxis: {
       type: 'value',
       name: selectedPair?.var1,
-      nameTextStyle: { color: '#9fbcd0' },
-      splitLine: { lineStyle: { color: '#163850' } },
-      axisLabel: { color: '#9fbcd0' },
+      nameTextStyle: { color: '#64748b', fontFamily: 'monospace', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+      axisLabel: { color: '#64748b', fontFamily: 'monospace', fontSize: 10 },
     },
     yAxis: {
       type: 'value',
       name: selectedPair?.var2,
-      nameTextStyle: { color: '#9fbcd0' },
-      splitLine: { lineStyle: { color: '#163850' } },
-      axisLabel: { color: '#9fbcd0' },
+      nameTextStyle: { color: '#64748b', fontFamily: 'monospace', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+      axisLabel: { color: '#64748b', fontFamily: 'monospace', fontSize: 10 },
     },
     series: [
       {
         name: 'Quan sát',
         type: 'scatter',
         data: scatterPoints.map((s) => [s.x, s.y]),
-        itemStyle: { color: '#38bdf8' },
-        symbolSize: 8,
+        itemStyle: { color: '#06b6d4' },
+        symbolSize: 6,
       },
     ],
   };
@@ -167,117 +163,124 @@ export default function CorrelationPage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <div className="bg-[#102d44] border border-[#2b5268] rounded-xl p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold tracking-wider text-cyan-400 uppercase">
-              <Grid className="w-4 h-4" />
-              S05 · Thám hiểm Tương quan Hải dương
-            </div>
-            <h1 className="text-2xl font-extrabold text-white mt-1">Ma trận tương quan & Phân tán (Correlations)</h1>
-            <p className="text-sm text-[#adc7d9] mt-1">
-              Phân tích mối liên hệ đa biến giữa độ cao sóng, chu kỳ và nhiệt độ biển.
-            </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.07]">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 font-medium mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            S05 · Thám hiểm Tương quan Hải dương
           </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            Ma trận tương quan &amp; Phân tán (Correlations)
+          </h1>
+          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            Phân tích mối liên hệ đa biến giữa độ cao sóng, chu kỳ sóng trội và nhiệt độ nước biển tại trạm 51201.
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2 bg-[#0b2438] p-1.5 rounded-lg border border-[#244b63]">
-            <button
-              onClick={() => setMethod('pearson')}
-              className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${
-                method === 'pearson'
-                  ? 'bg-cyan-500 text-gray-950 shadow-md'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Pearson (Tuyến tính)
-            </button>
-            <button
-              onClick={() => setMethod('spearman')}
-              className={`px-3 py-1.5 rounded text-xs font-semibold transition-all ${
-                method === 'spearman'
-                  ? 'bg-cyan-500 text-gray-950 shadow-md'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Spearman (Thứ hạng)
-            </button>
-          </div>
+        {/* SEGMENTED CONTROL */}
+        <div className="inline-flex items-center p-1 rounded-lg bg-[#08121b] border border-white/[0.08] text-xs font-mono self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setMethod('pearson')}
+            className={`px-3 py-1.5 rounded-md transition-all ${
+              method === 'pearson'
+                ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Pearson (Tuyến tính)
+          </button>
+          <button
+            type="button"
+            onClick={() => setMethod('spearman')}
+            className={`px-3 py-1.5 rounded-md transition-all ${
+              method === 'spearman'
+                ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Spearman (Thứ hạng)
+          </button>
         </div>
       </div>
 
-      {/* MAIN CONTENT: HEATMAP + SCATTER DETAIL */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* HEATMAP 7 COLS */}
-        <div className="lg:col-span-7 bg-[#102d44] border border-[#2b5268] rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              Ma trận tương quan đối xứng ({method.toUpperCase()})
-            </h2>
-            <span className="text-xs text-gray-400">Click vào ô để phân tích chi tiết</span>
+      {/* MAIN TWO COLUMNS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* HEATMAP (7 COLS) */}
+        <div className="lg:col-span-7 p-6 rounded-xl bg-[#08121b] border border-white/[0.07] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.06] mb-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                Ma trận tương quan đối xứng ({method.toUpperCase()})
+              </h2>
+              <span className="text-[11px] font-mono text-slate-500">Click ô để mở Scatter</span>
+            </div>
+
+            <EChart
+              options={heatmapOptions}
+              height={360}
+              onEvents={{
+                click: (params: unknown) => {
+                  const p = params as { value: [number, number, number] };
+                  const v1 = variables[p.value[1]];
+                  const v2 = variables[p.value[0]];
+                  setSelectedPair({ var1: v1, var2: v2, coeff: p.value[2] });
+                },
+              }}
+            />
           </div>
 
-          <EChart
-            options={heatmapOptions}
-            height={380}
-            onEvents={{
-              click: (params: unknown) => {
-                const p = params as { value: [number, number, number] };
-                const v1 = variables[p.value[1]];
-                const v2 = variables[p.value[0]];
-                setSelectedPair({ var1: v1, var2: v2, coeff: p.value[2] });
-              },
-            }}
-          />
-
-          <div className="mt-4 pt-3 border-t border-[#244b63] flex items-center gap-2 text-xs text-gray-400">
-            <Info className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span>Màu xanh dương: Tương quan dương mạnh ($r &gt; 0.6$). Màu đỏ: Tương quan âm ($r &lt; -0.3$).</span>
+          <div className="mt-4 pt-3 border-t border-white/[0.05] flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+            <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span>Xanh: Tương quan dương ($r &gt; 0.6$). Đỏ: Nghịch biến ($r &lt; -0.3$).</span>
           </div>
         </div>
 
-        {/* SCATTER DETAIL 5 COLS */}
-        <div className="lg:col-span-5 bg-[#102d44] border border-[#2b5268] rounded-xl p-6 flex flex-col justify-between">
+        {/* SCATTER DETAIL (5 COLS) */}
+        <div className="lg:col-span-5 p-6 rounded-xl bg-[#08121b] border border-white/[0.07] flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[#244b63]">
-              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                <Activity className="w-4 h-4" />
-                Phân tán chi tiết cặp biến (Scatter Plot)
+            <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.06]">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                Phân tán cặp biến (Scatter Plot)
               </span>
               {selectedPair && (
-                <span className="text-xs font-bold px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700 text-cyan-300">
+                <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800 text-cyan-300">
                   r = {selectedPair.coeff.toFixed(2)}
                 </span>
               )}
             </div>
 
             {selectedPair ? (
-              <div className="mt-3">
-                <div className="text-sm font-semibold text-white">
+              <div className="mt-4">
+                <div className="text-xs font-mono font-medium text-slate-300">
                   {VARIABLE_NAMES[selectedPair.var1] || selectedPair.var1} ↔ {VARIABLE_NAMES[selectedPair.var2] || selectedPair.var2}
                 </div>
 
                 <div className="mt-2">
-                  <EChart options={scatterOptions} height={280} />
+                  <EChart options={scatterOptions} height={260} />
                 </div>
 
-                <div className="mt-3 bg-[#081f33] p-3 rounded-lg border border-[#244b63] text-xs text-gray-300 space-y-1">
-                  <div className="font-semibold text-cyan-300">Nhận định khai phá:</div>
-                  <p>
+                <div className="mt-4 p-3.5 rounded-lg bg-[#050c14] border border-white/[0.05] text-xs text-slate-300 space-y-1.5">
+                  <div className="font-semibold text-cyan-300 text-[11px] font-mono uppercase tracking-wider">
+                    Nhận định vật lý hải dương:
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
                     {selectedPair.coeff > 0.6
-                      ? `Mối tương quan đồng biến mạnh: Khi ${selectedPair.var1} tăng thì ${selectedPair.var2} có xu hướng tăng rõ rệt (phù hợp với quy luật vật lý sóng swell Hawaii).`
+                      ? `Tương quan đồng biến mạnh: Khi ${selectedPair.var1} tăng thì ${selectedPair.var2} tăng rõ rệt (phù hợp với tính chất sóng Swell Bắc Thái Bình Dương tại Waimea).`
                       : selectedPair.coeff < -0.3
-                      ? `Mối tương quan nghịch biến: Khi ${selectedPair.var1} tăng thì ${selectedPair.var2} giảm (ví dụ: mùa đông sóng cao đi kèm nhiệt độ biển hạ thấp).`
-                      : `Mối liên hệ tuyến tính yếu giữa ${selectedPair.var1} và ${selectedPair.var2}.`}
+                      ? `Tương quan nghịch biến: Khi ${selectedPair.var1} tăng thì ${selectedPair.var2} giảm (mùa đông sóng cao thường đi kèm nhiệt độ biển hạ nhiệt).`
+                      : `Mối tương quan tuyến tính yếu giữa ${selectedPair.var1} và ${selectedPair.var2}.`}
                   </p>
-                  <p className="text-[11px] text-gray-400 italic">
+                  <p className="text-[10px] text-slate-500 italic">
                     *Tương quan thống kê không đồng nghĩa với quan hệ nguyên nhân - kết quả.
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="py-12 text-center text-gray-400 text-xs">
-                Chọn một ô trong ma trận để xem biểu đồ phân tán.
+              <div className="py-16 text-center text-slate-500 text-xs font-mono">
+                Chọn một ô trong ma trận để xem phân tán.
               </div>
             )}
           </div>
@@ -286,4 +289,3 @@ export default function CorrelationPage() {
     </div>
   );
 }
-

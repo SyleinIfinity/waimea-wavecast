@@ -19,303 +19,185 @@ import {
   Activity,
   ShieldAlert,
   Compass,
-  Radio,
   TableProperties,
   ChartNoAxesCombined,
   TrendingUpDown,
+  Radio,
+  Clock,
+  MapPin,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('demo');
 
-  const navItems = [
+  const navSections = [
     {
-      group: 'FRONTEND CORE & DATA ANALYTICS (TL02)',
+      title: 'Khai phá & Dự báo (TL03)',
       items: [
-        {
-          id: 'dashboard',
-          label: 'Overview Dashboard',
-          icon: Compass,
-          desc: 'S01 · Tổng quan trạm NOAA',
-          highlight: false,
-        },
-        {
-          id: 'observations',
-          label: 'Observations Explorer',
-          icon: TableProperties,
-          desc: 'S02 · Dữ liệu quan trắc sóng',
-          highlight: false,
-        },
-        {
-          id: 'time-series',
-          label: 'Time-Series Analytics',
-          icon: ChartNoAxesCombined,
-          desc: 'S03 · Daily / Weekly / Monthly',
-          highlight: false,
-        },
-        {
-          id: 'trend',
-          label: 'Trend & Seasonality',
-          icon: TrendingUpDown,
-          desc: 'S04 · Decomposition Analytics',
-          highlight: false,
-        },
+        { id: 'forecast', label: 'Dự báo & Phân loại', icon: TrendingUp, code: 'S07', desc: 'Hồi quy T+1 & Cấp sóng' },
+        { id: 'correlations', label: 'Ma trận tương quan', icon: Grid, code: 'S05', desc: 'Pearson & Spearman' },
+        { id: 'clustering', label: 'Phân cụm K-means', icon: Layers, code: 'S06', desc: 'Chế độ sóng & Centroid' },
+        { id: 'models', label: 'Model Evaluation', icon: Database, code: 'S08', desc: 'Registry & Benchmarks' },
       ],
     },
-
     {
-      group: 'KHAI PHÁ & DỰ BÁO SÓNG (TL03)',
+      title: 'Quản trị & Diễn tập (Admin)',
       items: [
-        {
-          id: 'forecast',
-          label: 'Dự báo & Phân loại',
-          icon: TrendingUp,
-          desc: 'S07 · Hồi quy T+1 (WVHT) & Cấp sóng',
-          highlight: false,
-        },
-        {
-          id: 'correlations',
-          label: 'Ma trận tương quan',
-          icon: Grid,
-          desc: 'S05 · Pearson & Spearman Heatmap',
-          highlight: false,
-        },
-        {
-          id: 'clustering',
-          label: 'Phân cụm K-means',
-          icon: Layers,
-          desc: 'S06 · Chế độ sóng & Centroid Radar',
-          highlight: false,
-        },
-        {
-          id: 'models',
-          label: 'Model Evaluation',
-          icon: Database,
-          desc: 'S08 · Model Lab & Baseline Benchmarks',
-          highlight: false,
-        },
+        { id: 'demo', label: 'Demo Control Sandbox', icon: ShieldAlert, code: 'S11', desc: 'Xóa & Tái tạo Gold' },
+        { id: 'pipeline', label: 'Pipeline Monitor', icon: Activity, code: 'S10', desc: 'Giám sát dịch vụ DAG' },
       ],
     },
-
     {
-      group: 'QUẢN TRỊ & HỆ THỐNG (ADMIN)',
+      title: 'Quan trắc & Thống kê (TL02)',
       items: [
-        {
-          id: 'demo',
-          label: 'Admin Demo Control',
-          icon: ShieldAlert,
-          desc: 'S11 · Xóa & Tái tạo Gold Sandbox',
-          highlight: true,
-        },
-        {
-          id: 'pipeline',
-          label: 'Pipeline Monitor',
-          icon: Activity,
-          desc: 'S10 · Giám sát dịch vụ & Luồng DAG',
-          highlight: false,
-        },
+        { id: 'dashboard', label: 'Overview Dashboard', icon: Compass, code: 'S01', desc: 'Tổng quan trạm NOAA' },
+        { id: 'observations', label: 'Observations Explorer', icon: TableProperties, code: 'S02', desc: 'Dữ liệu quan trắc sóng' },
+        { id: 'time-series', label: 'Time-Series Analytics', icon: ChartNoAxesCombined, code: 'S03', desc: 'Daily / Weekly / Monthly' },
+        { id: 'trend', label: 'Trend & Seasonality', icon: TrendingUpDown, code: 'S04', desc: 'Phân rã chuỗi thời gian' },
       ],
     },
   ];
 
+  // Tìm tab hiện tại để render breadcrumb
+  const currentItem = navSections.flatMap((s) => s.items).find((i) => i.id === activeTab);
+  const currentSection = navSections.find((s) => s.items.some((i) => i.id === activeTab));
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#071726] text-[#e6f3ff] font-sans antialiased">
-
+    <div className="flex h-screen w-screen overflow-hidden bg-[#04090e] text-[#f1f5f9] font-sans antialiased">
       {/* ================= SIDEBAR ================= */}
-      <aside className="w-72 flex-none bg-[#092033] border-r border-[#1a3b54] flex flex-col justify-between shadow-2xl z-20">
-
-        <div className="p-5 min-h-0 flex flex-col">
-
-          {/* LOGO & BRAND */}
-          <div className="flex items-center gap-3 pb-5 border-b border-[#183952] shrink-0">
-
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-gray-950 shadow-lg shadow-cyan-500/20">
-              <Waves className="w-6 h-6 text-gray-950 stroke-[2.5]" />
+      <aside className="w-64 flex-none bg-[#071018] border-r border-white/[0.07] flex flex-col justify-between select-none z-20">
+        <div className="p-4 flex flex-col min-h-0">
+          {/* BRAND HEADER */}
+          <div className="flex items-center gap-3 px-2 py-2 mb-4 border-b border-white/[0.06] pb-4">
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Waves className="w-4 h-4 stroke-[2.2]" />
             </div>
-
-            <div>
-              <div className="text-base font-black tracking-wider text-white leading-none flex items-center gap-1.5">
-                WAIMEA
-                <span className="text-cyan-400">
-                  WAVECAST
-                </span>
+            <div className="min-w-0">
+              <div className="text-xs font-bold tracking-tight text-white flex items-center gap-1.5 leading-none">
+                WAIMEA <span className="text-cyan-400 font-semibold">WAVECAST</span>
               </div>
-
-              <div className="text-[10px] text-cyan-300/80 font-mono tracking-widest uppercase mt-1 flex items-center gap-1">
-                <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" />
-                Station 51201 · Hawaii
+              <div className="text-[10px] text-slate-400 font-mono mt-1 flex items-center gap-1 leading-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                NOAA 51201 · Hawaii
               </div>
             </div>
-
           </div>
 
-          {/* NAVIGATION */}
-          <nav
-            aria-label="Điều hướng chính"
-            className="mt-6 space-y-6 min-h-0 flex-1 overflow-y-auto pr-1"
-          >
-
-            {navItems.map((grp) => (
-
-              <div key={grp.group} className="space-y-1.5">
-
-                {/* GROUP TITLE */}
-                <div className="text-[10px] uppercase font-bold tracking-wider text-cyan-400/70 px-3">
-                  {grp.group}
+          {/* NAV LIST */}
+          <nav aria-label="Điều hướng hệ thống" className="space-y-5 overflow-y-auto pr-1 flex-1 min-h-0">
+            {navSections.map((sec) => (
+              <div key={sec.title} className="space-y-1">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 px-2.5 py-1">
+                  {sec.title}
                 </div>
-
-                {/* MENU ITEMS */}
-                {grp.items.map((item) => {
-
+                {sec.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
-
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      aria-current={isActive ? 'page' : undefined}
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full group text-left px-3.5 py-2.5 rounded-xl text-xs transition-all flex items-center gap-3 ${
+                      className={`w-full group text-left px-2.5 py-2 rounded-lg text-xs transition-all flex items-center justify-between ${
                         isActive
-                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-gray-950 font-bold shadow-lg shadow-cyan-500/20 scale-[1.02]'
-                          : item.highlight
-                            ? 'bg-amber-950/40 text-amber-200 border border-amber-700/50 hover:bg-amber-900/40'
-                            : 'text-[#adc7d9] hover:bg-[#102d44] hover:text-white'
+                          ? 'bg-white/[0.08] text-white font-medium border border-white/[0.12] shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
                       }`}
                     >
-
-                      {/* ICON */}
-                      <Icon
-                        className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
-                          isActive
-                            ? 'text-gray-950'
-                            : item.highlight
-                              ? 'text-amber-400'
-                              : 'text-cyan-400'
-                        }`}
-                      />
-
-                      {/* MENU CONTENT */}
-                      <div className="flex-1 min-w-0">
-
-                        <div className="truncate font-semibold">
-                          {item.label}
-                        </div>
-
-                        <div
-                          className={`text-[10px] truncate ${
-                            isActive
-                              ? 'text-gray-900 font-medium'
-                              : 'text-gray-400'
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon
+                          className={`w-4 h-4 shrink-0 transition-colors ${
+                            isActive ? 'text-cyan-400' : 'text-slate-500 group-hover:text-slate-300'
                           }`}
-                        >
-                          {item.desc}
-                        </div>
-
+                        />
+                        <span className="truncate">{item.label}</span>
                       </div>
-
+                      <span
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                          isActive
+                            ? 'bg-cyan-500/20 text-cyan-300 font-semibold'
+                            : 'text-slate-600 group-hover:text-slate-400'
+                        }`}
+                      >
+                        {item.code}
+                      </span>
                     </button>
                   );
                 })}
-
               </div>
             ))}
-
           </nav>
-
         </div>
 
-        {/* ================= SIDEBAR FOOTER ================= */}
-        <div className="p-4 border-t border-[#183952] bg-[#071929] text-[11px] text-gray-400 space-y-1 shrink-0">
-
-          <div className="flex justify-between items-center text-gray-300">
-            <span className="font-semibold text-white">
-              Vị trí:
+        {/* SIDEBAR FOOTER STATION INFO */}
+        <div className="p-3.5 border-t border-white/[0.06] bg-[#050c13] text-[11px] text-slate-400 space-y-1.5 shrink-0">
+          <div className="flex justify-between items-center text-slate-300">
+            <span className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
+              <MapPin className="w-3 h-3 text-cyan-400" /> Vị trí
             </span>
-            <span>
-              Vịnh Waimea, Oahu, HI
+            <span className="text-[11px] font-medium text-slate-200">Waimea Bay, Oahu, HI</span>
+          </div>
+          <div className="flex justify-between items-center text-slate-300">
+            <span className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
+              <Clock className="w-3 h-3 text-cyan-400" /> Múi giờ
+            </span>
+            <span className="text-[11px] font-mono text-cyan-300">HST (UTC-10)</span>
+          </div>
+          <div className="pt-2 border-t border-white/[0.05] flex justify-between items-center text-[10px] text-slate-500 font-mono">
+            <span>Phân hệ: <strong className="text-slate-400">TL03</strong></span>
+            <span className="text-emerald-400 flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-emerald-400"></span> Online
             </span>
           </div>
-
-          <div className="flex justify-between items-center">
-            <span>
-              Múi giờ phân tích:
-            </span>
-
-            <span className="font-mono text-cyan-400">
-              HST (UTC-10)
-            </span>
-          </div>
-
-          <div className="pt-2 text-[10px] text-gray-500 flex justify-between items-center">
-
-            <span>
-              Frontend:
-              <strong className="text-slate-300"> TL02 + TL03</strong>
-            </span>
-
-            <span className="text-emerald-400 font-medium">
-              Waimea WaveCast
-            </span>
-
-          </div>
-
         </div>
-
       </aside>
 
-      {/* ================= MAIN VIEWPORT ================= */}
-      <main className="min-w-0 flex-1 overflow-y-auto bg-gradient-to-br from-[#071a2b] via-[#092238] to-[#071624] p-4 sm:p-6 lg:p-8">
+      {/* ================= MAIN AREA ================= */}
+      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
+        {/* TOP SYSTEM BAR */}
+        <header className="h-12 flex-none border-b border-white/[0.07] bg-[#071018]/90 backdrop-blur px-6 flex items-center justify-between text-xs z-10">
+          <div className="flex items-center gap-2 text-slate-400 font-mono text-[11px]">
+            <span>Waimea WaveCast</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-slate-500">{currentSection?.title}</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-slate-200 font-medium">{currentItem?.label}</span>
+          </div>
 
-        <div className="max-w-7xl mx-auto pb-12">
+          <div className="flex items-center gap-4 text-xs font-mono">
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span className="text-[11px]">NDBC 51201 Live Polling</span>
+            </div>
+            <div className="h-3 w-px bg-white/[0.1]"></div>
+            <div className="text-[11px] text-slate-400">
+              Target: <span className="text-cyan-400 font-semibold">T+1 Daily Median (HST)</span>
+            </div>
+          </div>
+        </header>
 
-          {/* TL02: FRONTEND CORE */}
-          {activeTab === 'dashboard' && (
-            <DashboardPage />
-          )}
+        {/* MAIN VIEWPORT */}
+        <main className="min-w-0 flex-1 overflow-y-auto p-6 lg:p-8 bg-[#04090e]">
+          <div className="max-w-7xl mx-auto pb-16">
+            {/* TL03: DATA MINING & FORECAST */}
+            {activeTab === 'forecast' && <ForecastPage />}
+            {activeTab === 'correlations' && <CorrelationPage />}
+            {activeTab === 'clustering' && <ClusteringPage />}
+            {activeTab === 'models' && <ModelsPage />}
 
-          {activeTab === 'observations' && (
-            <ObservationsPage />
-          )}
+            {/* TL03: ADMIN & DEMO */}
+            {activeTab === 'demo' && <DemoControlPage />}
+            {activeTab === 'pipeline' && <PipelinePage />}
 
-          {activeTab === 'time-series' && (
-            <TimeSeriesPage />
-          )}
-          {activeTab === 'trend' && (
-            <TrendPage />
-          )}
-
-          {/* TL03: DATA MINING & FORECAST */}
-          {activeTab === 'correlations' && (
-            <CorrelationPage />
-          )}
-
-          {activeTab === 'clustering' && (
-            <ClusteringPage />
-          )}
-
-          {activeTab === 'forecast' && (
-            <ForecastPage />
-          )}
-
-          {activeTab === 'models' && (
-            <ModelsPage />
-          )}
-
-          {/* TL03: ADMIN & SYSTEM */}
-          {activeTab === 'pipeline' && (
-            <PipelinePage />
-          )}
-
-          {activeTab === 'demo' && (
-            <DemoControlPage />
-          )}
-
-        </div>
-
-      </main>
-
+            {/* TL02: FRONTEND CORE */}
+            {activeTab === 'dashboard' && <DashboardPage />}
+            {activeTab === 'observations' && <ObservationsPage />}
+            {activeTab === 'time-series' && <TimeSeriesPage />}
+            {activeTab === 'trend' && <TrendPage />}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
