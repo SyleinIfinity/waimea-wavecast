@@ -22,15 +22,13 @@ import {
   TableProperties,
   ChartNoAxesCombined,
   TrendingUpDown,
-  Radio,
   Clock,
   MapPin,
   ChevronRight,
-  CloudSun,
   Wind,
   Thermometer,
   Gauge,
-  Satellite,
+  Radio,
 } from 'lucide-react';
 
 export default function App() {
@@ -68,44 +66,41 @@ export default function App() {
   const currentSection = navSections.find((s) => s.items.some((i) => i.id === activeTab));
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#03080e] text-[#f1f5f9] font-sans antialiased">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#090d14] text-slate-200 font-sans antialiased">
       {/* ================= SIDEBAR ================= */}
-      <aside className="w-68 flex-none bg-[#050f1a]/95 backdrop-blur-md border-r border-teal-500/15 flex flex-col justify-between select-none z-20 shadow-2xl">
+      <aside className="w-68 flex-none bg-[#0c111a] border-r border-slate-800 flex flex-col justify-between select-none z-20">
         <div className="p-4 flex flex-col min-h-0">
           {/* BRAND HEADER */}
-          <div className="flex items-center gap-3 px-2 py-2 mb-4 border-b border-teal-500/15 pb-4">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-cyan-600 flex items-center justify-center text-slate-950 shadow-lg shadow-teal-500/20">
-              <CloudSun className="w-5 h-5 text-slate-950 stroke-[2.2]" />
+          <div className="flex items-center gap-3 px-2 py-2 mb-3 border-b border-slate-800 pb-3">
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+              <Waves className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-black tracking-tight text-white flex items-center gap-1.5 leading-none">
-                WAIMEA <span className="text-teal-400 font-semibold">CLIMATE</span>
+              <div className="text-xs font-semibold tracking-wider text-slate-100 uppercase">
+                WAIMEA <span className="text-sky-400 font-bold">WAVECAST</span>
               </div>
-              <div className="text-[10px] text-teal-300/80 font-mono mt-1 flex items-center gap-1.5 leading-none">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Phao viễn thám NOAA 51201
+              <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                NOAA Buoy 51201
               </div>
             </div>
           </div>
 
-          {/* SATELLITE & SENSOR BADGE */}
-          <div className="mx-2 mb-3 px-2.5 py-1.5 rounded-lg bg-teal-950/30 border border-teal-500/20 flex items-center justify-between text-[10px] font-mono text-teal-300">
-            <span className="flex items-center gap-1.5">
-              <Satellite className="w-3 h-3 text-teal-400" />
+          {/* TELEMETRY STATUS CHIP */}
+          <div className="mx-2 mb-3 px-2.5 py-1.5 rounded bg-slate-900 border border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span className="flex items-center gap-1.5 text-slate-300">
+              <Radio className="w-3 h-3 text-sky-400" />
               Chế độ Viễn thám
             </span>
-            <span className="text-emerald-400 font-semibold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              24/7 Telemetry
-            </span>
+            <span className="text-emerald-400 font-medium">24/7 Active</span>
           </div>
 
           {/* NAV LIST */}
           <nav aria-label="Điều hướng hệ thống" className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0">
             {navSections.map((sec) => (
               <div key={sec.title} className="space-y-1">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-teal-400/60 px-2.5 py-1 flex items-center justify-between">
-                  <span>{sec.title}</span>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 px-2 py-1">
+                  {sec.title}
                 </div>
                 {sec.items.map((item) => {
                   const Icon = item.icon;
@@ -115,25 +110,25 @@ export default function App() {
                       key={item.id}
                       type="button"
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full group text-left px-2.5 py-2 rounded-lg text-xs transition-all flex items-center justify-between ${
+                      className={`w-full group text-left px-2.5 py-2 rounded text-xs transition-colors flex items-center justify-between cursor-pointer ${
                         isActive
-                          ? 'bg-teal-500/15 text-white font-medium border border-teal-500/35 shadow-sm shadow-teal-500/10'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
+                          ? 'bg-sky-500/10 text-white font-medium border border-sky-500/30'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Icon
-                          className={`w-4 h-4 shrink-0 transition-colors ${
-                            isActive ? 'text-teal-300' : 'text-slate-500 group-hover:text-slate-300'
+                          className={`w-4 h-4 shrink-0 ${
+                            isActive ? 'text-sky-400' : 'text-slate-500 group-hover:text-slate-300'
                           }`}
                         />
                         <span className="truncate">{item.label}</span>
                       </div>
                       <span
-                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
                           isActive
-                            ? 'bg-teal-400/20 text-teal-300 font-semibold'
-                            : 'text-slate-600 group-hover:text-slate-400'
+                            ? 'bg-sky-500/20 text-sky-300 font-medium'
+                            : 'text-slate-500 group-hover:text-slate-400'
                         }`}
                       >
                         {item.code}
@@ -147,25 +142,25 @@ export default function App() {
         </div>
 
         {/* SIDEBAR FOOTER STATION INFO */}
-        <div className="p-3.5 border-t border-teal-500/15 bg-[#030910] text-[11px] text-slate-400 space-y-1.5 shrink-0">
-          <div className="flex justify-between items-center text-slate-300">
-            <span className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
-              <MapPin className="w-3 h-3 text-teal-400" /> Tọa độ trạm
+        <div className="p-3.5 border-t border-slate-800 bg-[#090d14] text-[11px] text-slate-400 space-y-1.5 shrink-0">
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <MapPin className="w-3 h-3 text-slate-500" /> Tọa độ trạm
             </span>
-            <span className="text-[10px] font-mono text-slate-300">21°40'12" N 158°07'00" W</span>
+            <span className="font-mono text-slate-300 tabular-nums">21°40'12" N 158°07'00" W</span>
           </div>
-          <div className="flex justify-between items-center text-slate-300">
-            <span className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
-              <Clock className="w-3 h-3 text-teal-400" /> Múi giờ Đảo
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <Clock className="w-3 h-3 text-slate-500" /> Múi giờ Đảo
             </span>
-            <span className="text-[10px] font-mono text-teal-300">HST (UTC-10)</span>
+            <span className="font-mono text-slate-300">HST (UTC-10)</span>
           </div>
-          <div className="pt-2 border-t border-white/[0.05] flex justify-between items-center text-[10px] text-slate-500 font-mono">
+          <div className="pt-2 border-t border-slate-800/60 flex justify-between items-center font-mono text-[10px] text-slate-400">
             <span className="flex items-center gap-1">
-              <Wind className="w-3 h-3 text-cyan-400" /> Gió: <strong className="text-slate-300">14 kts ENE</strong>
+              <Wind className="w-3 h-3 text-slate-500" /> Gió: <strong className="text-slate-300">14 kts ENE</strong>
             </span>
             <span className="flex items-center gap-1">
-              <Thermometer className="w-3 h-3 text-amber-400" /> Biển: <strong className="text-slate-300">25.4°C</strong>
+              <Thermometer className="w-3 h-3 text-slate-500" /> Biển: <strong className="text-slate-300">25.4°C</strong>
             </span>
           </div>
         </div>
@@ -173,12 +168,12 @@ export default function App() {
 
       {/* ================= MAIN AREA ================= */}
       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
-        {/* TOP ATMOSPHERIC SYSTEM BAR */}
-        <header className="h-12 flex-none border-b border-teal-500/15 bg-[#050f1a]/85 backdrop-blur-md px-6 flex items-center justify-between text-xs z-10 shadow-sm">
+        {/* TOP SYSTEM BAR */}
+        <header className="h-12 flex-none border-b border-slate-800 bg-[#0c111a] px-6 flex items-center justify-between text-xs z-10">
           <div className="flex items-center gap-2 text-slate-400 font-mono text-[11px]">
-            <span className="text-teal-400/90 font-semibold flex items-center gap-1.5">
-              <Waves className="w-3.5 h-3.5 text-teal-400" />
-              Waimea ClimateCast
+            <span className="text-slate-200 font-semibold flex items-center gap-1.5">
+              <Waves className="w-3.5 h-3.5 text-sky-400" />
+              Waimea Observatory
             </span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
             <span className="text-slate-500">{currentSection?.title}</span>
@@ -189,16 +184,16 @@ export default function App() {
           <div className="flex items-center gap-4 text-xs font-mono">
             <div className="hidden sm:flex items-center gap-3 text-slate-400 text-[11px]">
               <span className="flex items-center gap-1">
-                <Gauge className="w-3 h-3 text-cyan-400" /> Khí áp: <strong className="text-slate-200">1014.2 hPa</strong>
+                <Gauge className="w-3 h-3 text-slate-500" /> Khí áp: <strong className="text-slate-200 tabular-nums">1014.2 hPa</strong>
               </span>
               <span className="text-slate-700">|</span>
               <span className="flex items-center gap-1">
-                <Wind className="w-3 h-3 text-teal-400" /> Swell: <strong className="text-slate-200">325° NNW</strong>
+                <Wind className="w-3 h-3 text-slate-500" /> Swell: <strong className="text-slate-200">325° NNW</strong>
               </span>
             </div>
-            <div className="h-3 w-px bg-teal-500/20"></div>
+            <div className="h-3 w-px bg-slate-800"></div>
             <div className="flex items-center gap-1.5 text-emerald-400 text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span>NOAA 51201 Telemetry Live</span>
             </div>
           </div>

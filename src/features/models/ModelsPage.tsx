@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getModelRegistry, getConfusionMatrix } from '../../api/client';
 import type { ModelRegistryItem, ConfusionMatrixData } from '../../api/types';
-import { Database, CheckCircle, Clock, Scale, ShieldCheck, Thermometer, Wind } from 'lucide-react';
+import { CheckCircle, Clock, Scale, ShieldCheck } from 'lucide-react';
 
 export default function ModelsPage() {
   const [models, setModels] = useState<ModelRegistryItem[]>([]);
@@ -22,7 +22,7 @@ export default function ModelsPage() {
   if (loading || !matrixData) {
     return (
       <div className="py-20 text-center text-slate-400">
-        <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-teal-400 border-t-transparent mb-3"></div>
+        <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-slate-400 border-t-transparent mb-3"></div>
         <div className="text-xs font-mono">Đang tải danh mục mô hình &amp; benchmark kiểm thử...</div>
       </div>
     );
@@ -33,13 +33,14 @@ export default function ModelsPage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-teal-500/15">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-teal-400 font-medium mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
-            S08 · Phòng Nghiên cứu &amp; Đánh giá Mô hình (Climate Model Lab)
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-400 font-medium mb-1">
+            <span>S08</span>
+            <span className="text-slate-600">/</span>
+            <span>Model Lab</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-100">
             Model Registry &amp; Evaluation Benchmarks
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
@@ -48,13 +49,13 @@ export default function ModelsPage() {
         </div>
 
         {/* TABS SELECTOR */}
-        <div className="inline-flex items-center p-1 rounded-lg bg-[#06121d] border border-teal-500/20 text-xs font-mono self-start sm:self-auto shadow-sm">
+        <div className="inline-flex items-center p-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setActiveTab('registry')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`px-3 py-1 rounded transition-colors cursor-pointer ${
               activeTab === 'registry'
-                ? 'bg-teal-500/20 text-teal-300 font-semibold border border-teal-500/40 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 font-medium border border-slate-700'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -63,9 +64,9 @@ export default function ModelsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('comparison')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`px-3 py-1 rounded transition-colors cursor-pointer ${
               activeTab === 'comparison'
-                ? 'bg-teal-500/20 text-teal-300 font-semibold border border-teal-500/40 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 font-medium border border-slate-700'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -74,9 +75,9 @@ export default function ModelsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('confusion')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`px-3 py-1 rounded transition-colors cursor-pointer ${
               activeTab === 'confusion'
-                ? 'bg-teal-500/20 text-teal-300 font-semibold border border-teal-500/40 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 font-medium border border-slate-700'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -94,10 +95,10 @@ export default function ModelsPage() {
                 key={task}
                 type="button"
                 onClick={() => setSelectedTask(task)}
-                className={`px-3 py-1 rounded-md text-[11px] font-mono transition-colors ${
+                className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors cursor-pointer ${
                   selectedTask === task
-                    ? 'bg-teal-500/15 text-teal-300 border border-teal-500/40 font-semibold'
-                    : 'bg-[#06121d] border border-teal-500/15 text-slate-400 hover:text-slate-200'
+                    ? 'bg-slate-800 text-slate-100 border border-slate-700 font-medium'
+                    : 'bg-[#0f1520] border border-slate-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {task === 'all' ? 'TẤT CẢ' : task.toUpperCase()}
@@ -107,26 +108,26 @@ export default function ModelsPage() {
 
           <div className="grid grid-cols-1 gap-3.5">
             {filteredModels.map((m) => (
-              <div key={m.model_id} className="p-5 rounded-xl bg-[#06121d]/90 border border-teal-500/15 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-teal-500/10">
+              <div key={m.model_id} className="p-5 rounded-lg bg-[#0f1520] border border-slate-800">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
                   <div className="flex items-center gap-2.5">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase flex items-center gap-1 ${
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase flex items-center gap-1 ${
                         m.status === 'ready'
-                          ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                          ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/60'
                           : m.status === 'draft'
-                          ? 'bg-amber-950/60 text-amber-400 border border-amber-800'
+                          ? 'bg-amber-950/40 text-amber-400 border border-amber-800/60'
                           : 'bg-slate-900 text-slate-500 border border-slate-800'
                       }`}
                     >
                       {m.status === 'ready' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                       {m.status}
                     </span>
-                    <h3 className="text-sm font-bold text-white font-mono">{m.model_name}</h3>
+                    <h3 className="text-sm font-semibold text-slate-100 font-mono">{m.model_name}</h3>
                     <span className="text-xs text-slate-500 font-mono">({m.model_version})</span>
                   </div>
 
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-teal-950/40 text-teal-300 border border-teal-500/25">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                     {m.task_type.toUpperCase()}
                   </span>
                 </div>
@@ -138,11 +139,11 @@ export default function ModelsPage() {
                   </div>
                   <div>
                     <span className="text-slate-500 text-[11px]">Chuỗi huấn luyện:</span>
-                    <div className="text-teal-200 mt-1">{m.dataset_version}</div>
+                    <div className="text-slate-200 mt-1">{m.dataset_version}</div>
                   </div>
                   <div>
                     <span className="text-slate-500 text-[11px]">Chỉ số nghiệm thu:</span>
-                    <div className="text-emerald-400 mt-1 font-semibold">
+                    <div className="text-slate-100 mt-1 font-medium tabular-nums">
                       {m.metrics.mae !== undefined && `MAE: ${m.metrics.mae}m | RMSE: ${m.metrics.rmse}m | R²: ${m.metrics.r2}`}
                       {m.metrics.accuracy !== undefined && `Acc: ${(m.metrics.accuracy * 100).toFixed(1)}% | F1: ${m.metrics.macro_f1}`}
                       {m.metrics.silhouette !== undefined && `Silhouette: ${m.metrics.silhouette}`}
@@ -150,7 +151,7 @@ export default function ModelsPage() {
                   </div>
                 </div>
 
-                <div className="mt-3.5 pt-3 border-t border-teal-500/10 flex flex-wrap items-center justify-between text-[10px] font-mono text-slate-500">
+                <div className="mt-3.5 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between text-[10px] font-mono text-slate-500">
                   <span>GCS Artifact: <code className="text-slate-400">{m.artifact_gcs_uri || 'Internal DB metadata'}</code></span>
                   <span>Đặc trưng sử dụng: {m.features_used.join(', ')}</span>
                 </div>
@@ -162,10 +163,10 @@ export default function ModelsPage() {
 
       {/* TAB 2: BASELINE COMPARISON */}
       {activeTab === 'comparison' && (
-        <div className="p-6 rounded-xl bg-[#06121d]/90 border border-teal-500/15 shadow-sm">
+        <div className="p-5 rounded-lg bg-[#0f1520] border border-slate-800">
           <div className="flex items-center gap-2 mb-1.5">
-            <Scale className="w-4 h-4 text-teal-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+            <Scale className="w-4 h-4 text-slate-400" />
+            <h2 className="text-xs font-medium uppercase tracking-wider text-slate-300">
               So sánh hiệu năng với Mô hình Cơ sở (Baseline)
             </h2>
           </div>
@@ -175,7 +176,7 @@ export default function ModelsPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left font-mono">
-              <thead className="bg-[#040a12] text-slate-400 uppercase text-[10px] border-b border-teal-500/15">
+              <thead className="bg-[#090d14] text-slate-400 uppercase text-[10px] border-b border-slate-800">
                 <tr>
                   <th className="py-2.5 px-4 font-medium">Tác vụ</th>
                   <th className="py-2.5 px-4 font-medium">Mô hình ứng viên</th>
@@ -186,30 +187,30 @@ export default function ModelsPage() {
                   <th className="py-2.5 px-4 font-medium">Kết luận kiểm thử</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-teal-500/10 text-slate-300">
-                <tr className="hover:bg-white/[0.02]">
-                  <td className="py-3 px-4 font-bold text-teal-400">Regression (T+1 WVHT)</td>
-                  <td className="py-3 px-4 text-white">RandomForestRegressor v1</td>
+              <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                <tr className="hover:bg-slate-800/20">
+                  <td className="py-3 px-4 font-medium text-slate-200">Regression (T+1 WVHT)</td>
+                  <td className="py-3 px-4 text-slate-100">RandomForestRegressor v1</td>
                   <td className="py-3 px-4 text-slate-500">Persistence (T+0 → T+1)</td>
-                  <td className="py-3 px-4">
-                    <strong className="text-emerald-400">0.285 m</strong> <span className="text-slate-500">vs 0.512 m</span>
+                  <td className="py-3 px-4 tabular-nums">
+                    <strong className="text-slate-100">0.285 m</strong> <span className="text-slate-500">vs 0.512 m</span>
                   </td>
-                  <td className="py-3 px-4">
-                    <strong className="text-emerald-400">0.382 m</strong> <span className="text-slate-500">vs 0.724 m</span>
+                  <td className="py-3 px-4 tabular-nums">
+                    <strong className="text-slate-100">0.382 m</strong> <span className="text-slate-500">vs 0.724 m</span>
                   </td>
-                  <td className="py-3 px-4 text-emerald-400 font-bold">
+                  <td className="py-3 px-4 text-sky-400 font-medium tabular-nums">
                     +0.382 (0.814 vs 0.432)
                   </td>
                   <td className="py-3 px-4 text-emerald-400 font-medium">Đạt chuẩn nghiệm thu</td>
                 </tr>
-                <tr className="hover:bg-white/[0.02]">
-                  <td className="py-3 px-4 font-bold text-amber-400">Classification (Sóng)</td>
-                  <td className="py-3 px-4 text-white">RandomForestClassifier v1</td>
+                <tr className="hover:bg-slate-800/20">
+                  <td className="py-3 px-4 font-medium text-slate-200">Classification (Sóng)</td>
+                  <td className="py-3 px-4 text-slate-100">RandomForestClassifier v1</td>
                   <td className="py-3 px-4 text-slate-500">Majority Class Baseline</td>
-                  <td className="py-3 px-4" colSpan={2}>
-                    Macro-F1: <strong className="text-emerald-400">0.828</strong> vs 0.330
+                  <td className="py-3 px-4 tabular-nums" colSpan={2}>
+                    Macro-F1: <strong className="text-slate-100">0.828</strong> vs 0.330
                   </td>
-                  <td className="py-3 px-4 text-emerald-400 font-bold">+150%</td>
+                  <td className="py-3 px-4 text-sky-400 font-medium tabular-nums">+150%</td>
                   <td className="py-3 px-4 text-emerald-400 font-medium">Đạt chuẩn nghiệm thu</td>
                 </tr>
               </tbody>
@@ -220,10 +221,10 @@ export default function ModelsPage() {
 
       {/* TAB 3: CONFUSION MATRIX */}
       {activeTab === 'confusion' && (
-        <div className="p-6 rounded-xl bg-[#06121d]/90 border border-teal-500/15 shadow-sm">
+        <div className="p-5 rounded-lg bg-[#0f1520] border border-slate-800">
           <div className="flex items-center gap-2 mb-1.5">
-            <ShieldCheck className="w-4 h-4 text-teal-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4 text-slate-400" />
+            <h2 className="text-xs font-medium uppercase tracking-wider text-slate-300">
               Ma trận nhầm lẫn (Confusion Matrix) — Phân loại cấp sóng
             </h2>
           </div>
@@ -231,22 +232,22 @@ export default function ModelsPage() {
             Đánh giá độ chính xác phân loại cấp sóng biển trên 1.100 mẫu kiểm định độc lập (Test Set).
           </p>
 
-          <div className="max-w-lg mx-auto p-5 rounded-xl bg-[#040a12] border border-teal-500/20">
-            <div className="text-center font-mono text-[10px] text-teal-400/80 uppercase mb-3 tracking-wider">
+          <div className="max-w-lg mx-auto p-5 rounded-lg bg-[#090d14] border border-slate-800">
+            <div className="text-center font-mono text-[10px] text-slate-500 uppercase mb-3 tracking-wider">
               Nhãn dự đoán bởi Model (Predicted) →
             </div>
 
             <div className="grid grid-cols-4 gap-1.5 text-center text-xs font-mono">
               <div className="text-slate-500 p-2 text-[10px]">Actual ↓</div>
               {matrixData.labels.map((l) => (
-                <div key={l} className="font-semibold text-slate-300 p-2 bg-teal-950/30 rounded border border-teal-500/20 text-[11px]">
+                <div key={l} className="font-medium text-slate-300 p-2 bg-slate-800/80 rounded border border-slate-700 text-[11px]">
                   {l}
                 </div>
               ))}
 
               {matrixData.matrix.map((row, i) => (
                 <div key={i} className="contents">
-                  <div className="font-semibold text-slate-300 p-2 bg-teal-950/30 rounded border border-teal-500/20 flex items-center justify-center text-[11px]">
+                  <div className="font-medium text-slate-300 p-2 bg-slate-800/80 rounded border border-slate-700 flex items-center justify-center text-[11px]">
                     {matrixData.labels[i]}
                   </div>
                   {row.map((val, j) => {
@@ -256,14 +257,14 @@ export default function ModelsPage() {
                         key={j}
                         className={`p-3 rounded flex flex-col items-center justify-center border transition-colors ${
                           isDiagonal
-                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                            ? 'bg-sky-950/40 border-sky-800/60 text-sky-200'
                             : val > 20
-                            ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-                            : 'bg-white/[0.02] border-white/[0.03] text-slate-500'
+                            ? 'bg-amber-950/20 border-amber-800/40 text-amber-300'
+                            : 'bg-[#0f1520] border-slate-800/80 text-slate-500'
                         }`}
                       >
-                        <span className="text-sm font-bold">{val}</span>
-                        <span className="text-[9px] text-slate-500 mt-0.5">
+                        <span className="text-sm font-semibold tabular-nums">{val}</span>
+                        <span className="text-[9px] text-slate-500 mt-0.5 tabular-nums">
                           {((val / matrixData.total_samples) * 100).toFixed(1)}%
                         </span>
                       </div>
@@ -273,9 +274,9 @@ export default function ModelsPage() {
               ))}
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-teal-500/10 flex justify-between text-[11px] font-mono text-slate-400">
-              <span>Tổng số mẫu: <strong className="text-white">{matrixData.total_samples.toLocaleString()}</strong></span>
-              <span className="text-emerald-400 font-semibold">Độ chính xác: 84.2%</span>
+            <div className="mt-5 pt-3.5 border-t border-slate-800 flex justify-between text-[11px] font-mono text-slate-400">
+              <span>Tổng số mẫu: <strong className="text-slate-200 tabular-nums">{matrixData.total_samples.toLocaleString()}</strong></span>
+              <span className="text-slate-200 font-medium">Độ chính xác: 84.2%</span>
             </div>
           </div>
         </div>

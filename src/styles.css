@@ -4,28 +4,23 @@
   :root {
     color-scheme: dark;
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-    /* Climate & Marine Atmospheric Palette */
-    --climate-bg: #03080e;
-    --climate-surface: #06111d;
-    --climate-panel: #0a1829;
-    --climate-panel-subtle: #0d1e33;
-    --climate-teal: #14b8a6;
-    --climate-cyan: #06b6d4;
-    --climate-emerald: #10b981;
-    --climate-amber: #f59e0b;
-    --climate-rose: #f43f5e;
-    --climate-border: rgba(45, 212, 191, 0.12);
+    /* Professional Scientific Observatory Neutral Palette (90-95% Neutral) */
+    --surface-bg: #090d14;
+    --surface-card: #0f1520;
+    --surface-card-hover: #141c2b;
+    --surface-border: #1e2838;
+    --surface-border-subtle: #162030;
+    
+    /* Restrained Primary Accent (Sky / Slate Blue) */
+    --accent-primary: #0284c7;
+    --accent-primary-hover: #0369a1;
+    --accent-focus: rgba(2, 132, 199, 0.35);
   }
 
   body {
-    background-color: #03080e;
-    background-image: 
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(20, 184, 166, 0.12), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 50%, rgba(6, 182, 212, 0.05), transparent),
-      radial-gradient(ellipse 60% 40% at 0% 100%, rgba(16, 185, 129, 0.05), transparent);
-    background-attachment: fixed;
+    background-color: #090d14;
     color: #e2e8f0;
     font-family: var(--font-sans);
     margin: 0;
@@ -36,46 +31,32 @@
   }
 }
 
-/* Atmospheric Weather Station Panel */
-.climate-panel {
-  background: rgba(10, 24, 41, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(45, 212, 191, 0.15);
-  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+/* Professional Surface Cards with Hairline Borders */
+.surface-card {
+  background-color: #0f1520;
+  border: 1px solid #1e2838;
 }
 
-.climate-panel-subtle {
-  background: rgba(6, 17, 29, 0.8);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+.surface-card-subtle {
+  background-color: #0b1019;
+  border: 1px solid #182232;
 }
 
-.climate-panel-hover:hover {
-  border-color: rgba(45, 212, 191, 0.35);
-  box-shadow: 0 8px 32px -4px rgba(6, 182, 212, 0.12);
-}
-
-/* Subtle isobar pattern */
-.isobar-divider {
-  border-color: rgba(45, 212, 191, 0.1);
-}
-
-/* Custom Scrollbars */
+/* Custom Scrollbar - Minimal & Non-Intrusive */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #03080e;
+  background: #090d14;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #142a3e;
-  border-radius: 9999px;
+  background: #1e2838;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #1f405c;
+  background: #2a374d;
 }

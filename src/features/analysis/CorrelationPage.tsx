@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getCorrelationMatrix, getScatterData } from '../../api/client';
 import type { CorrelationMatrix, ScatterPoint } from '../../api/types';
 import EChart from '../../components/charts/EChart';
-import { Grid, Activity, Info, Wind, Thermometer, Compass } from 'lucide-react';
+import { Activity, Info } from 'lucide-react';
 import type { EChartsOption } from 'echarts';
 
 const VARIABLE_NAMES: Record<string, string> = {
@@ -41,7 +41,7 @@ export default function CorrelationPage() {
   if (loading || !matrixData) {
     return (
       <div className="py-20 text-center text-slate-400">
-        <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-teal-400 border-t-transparent mb-3"></div>
+        <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-slate-400 border-t-transparent mb-3"></div>
         <div className="text-xs font-mono">Đang tính ma trận tương quan vi khí hậu biển...</div>
       </div>
     );
@@ -59,8 +59,8 @@ export default function CorrelationPage() {
   const heatmapOptions: EChartsOption = {
     tooltip: {
       position: 'top',
-      backgroundColor: '#040d16',
-      borderColor: 'rgba(45,212,191,0.2)',
+      backgroundColor: '#0f1520',
+      borderColor: '#1e2838',
       borderWidth: 1,
       textStyle: { color: '#f1f5f9', fontSize: 12 },
       formatter: (params: unknown) => {
@@ -69,8 +69,8 @@ export default function CorrelationPage() {
         const v2 = variables[p.value[0]];
         const cell = matrix[p.value[1]][p.value[0]];
         return `<div class="p-1 font-mono text-xs">
-          <div class="font-bold text-teal-300 pb-1 mb-1 border-b border-white/[0.08]">${v1} ↔ ${v2}</div>
-          <div>Hệ số tương quan r: <strong class="text-white">${cell.coefficient?.toFixed(2) ?? 'N/A'}</strong></div>
+          <div class="font-semibold text-slate-200 pb-1 mb-1 border-b border-slate-700/60">${v1} ↔ ${v2}</div>
+          <div>Hệ số tương quan r: <strong class="text-white tabular-nums">${cell.coefficient?.toFixed(2) ?? 'N/A'}</strong></div>
           <div class="text-slate-400 text-[11px] mt-0.5">Số cặp đo: ${cell.paired_sample_count.toLocaleString()}</div>
         </div>`;
       },
@@ -80,14 +80,14 @@ export default function CorrelationPage() {
       type: 'category',
       data: variables,
       splitArea: { show: false },
-      axisLine: { lineStyle: { color: 'rgba(45,212,191,0.15)' } },
+      axisLine: { lineStyle: { color: '#1e2838' } },
       axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 },
     },
     yAxis: {
       type: 'category',
       data: variables,
       splitArea: { show: false },
-      axisLine: { lineStyle: { color: 'rgba(45,212,191,0.15)' } },
+      axisLine: { lineStyle: { color: '#1e2838' } },
       axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 },
     },
     visualMap: {
@@ -98,7 +98,7 @@ export default function CorrelationPage() {
       left: 'center',
       bottom: '0%',
       inRange: {
-        color: ['#f43f5e', '#0b1928', '#14b8a6', '#38bdf8'],
+        color: ['#991b1b', '#1e293b', '#0284c7'],
       },
       textStyle: { color: '#64748b', fontSize: 10, fontFamily: 'monospace' },
     },
@@ -123,14 +123,14 @@ export default function CorrelationPage() {
 
   const scatterOptions: EChartsOption = {
     tooltip: {
-      backgroundColor: '#040d16',
-      borderColor: 'rgba(45,212,191,0.2)',
+      backgroundColor: '#0f1520',
+      borderColor: '#1e2838',
       textStyle: { color: '#f1f5f9' },
       formatter: (p: unknown) => {
         const pt = p as { value: [number, number] };
         return `<div class="text-xs font-mono p-1">
-          <div>${selectedPair?.var1}: <strong class="text-white">${pt.value[0]}</strong></div>
-          <div>${selectedPair?.var2}: <strong class="text-teal-400">${pt.value[1]}</strong></div>
+          <div>${selectedPair?.var1}: <strong class="text-white tabular-nums">${pt.value[0]}</strong></div>
+          <div>${selectedPair?.var2}: <strong class="text-sky-400 tabular-nums">${pt.value[1]}</strong></div>
         </div>`;
       },
     },
@@ -139,14 +139,14 @@ export default function CorrelationPage() {
       type: 'value',
       name: selectedPair?.var1,
       nameTextStyle: { color: '#64748b', fontFamily: 'monospace', fontSize: 11 },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+      splitLine: { lineStyle: { color: '#162030' } },
       axisLabel: { color: '#64748b', fontFamily: 'monospace', fontSize: 10 },
     },
     yAxis: {
       type: 'value',
       name: selectedPair?.var2,
       nameTextStyle: { color: '#64748b', fontFamily: 'monospace', fontSize: 11 },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+      splitLine: { lineStyle: { color: '#162030' } },
       axisLabel: { color: '#64748b', fontFamily: 'monospace', fontSize: 10 },
     },
     series: [
@@ -154,8 +154,8 @@ export default function CorrelationPage() {
         name: 'Quan sát khí hậu',
         type: 'scatter',
         data: scatterPoints.map((s) => [s.x, s.y]),
-        itemStyle: { color: '#14b8a6' },
-        symbolSize: 6,
+        itemStyle: { color: '#0284c7' },
+        symbolSize: 5,
       },
     ],
   };
@@ -163,13 +163,14 @@ export default function CorrelationPage() {
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-teal-500/15">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-teal-400 font-medium mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
-            S05 · Thám hiểm Tương quan Khí hậu &amp; Hải dương
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-400 font-medium mb-1">
+            <span>S05</span>
+            <span className="text-slate-600">/</span>
+            <span>Correlations</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-100">
             Ma trận tương quan &amp; Phân tán (Correlations)
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
@@ -178,13 +179,13 @@ export default function CorrelationPage() {
         </div>
 
         {/* SEGMENTED CONTROL */}
-        <div className="inline-flex items-center p-1 rounded-lg bg-[#06121d] border border-teal-500/20 text-xs font-mono self-start sm:self-auto">
+        <div className="inline-flex items-center p-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setMethod('pearson')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`px-3 py-1 rounded transition-colors cursor-pointer ${
               method === 'pearson'
-                ? 'bg-teal-500/20 text-teal-300 font-semibold border border-teal-500/40 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 font-medium border border-slate-700'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -193,9 +194,9 @@ export default function CorrelationPage() {
           <button
             type="button"
             onClick={() => setMethod('spearman')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`px-3 py-1 rounded transition-colors cursor-pointer ${
               method === 'spearman'
-                ? 'bg-teal-500/20 text-teal-300 font-semibold border border-teal-500/40 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 font-medium border border-slate-700'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -207,11 +208,10 @@ export default function CorrelationPage() {
       {/* MAIN TWO COLUMNS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* HEATMAP (7 COLS) */}
-        <div className="lg:col-span-7 p-6 rounded-xl bg-[#06121d]/90 border border-teal-500/15 flex flex-col justify-between shadow-sm">
+        <div className="lg:col-span-7 p-5 rounded-lg bg-[#0f1520] border border-slate-800 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3.5 border-b border-teal-500/10 mb-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-teal-400"></span>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+              <h2 className="text-xs font-medium uppercase tracking-wider text-slate-300">
                 Ma trận đối xứng các tham số khí tượng ({method.toUpperCase()})
               </h2>
               <span className="text-[11px] font-mono text-slate-500">Click ô để mở Scatter</span>
@@ -231,22 +231,22 @@ export default function CorrelationPage() {
             />
           </div>
 
-          <div className="mt-4 pt-3 border-t border-teal-500/10 flex items-center gap-2 text-[11px] text-slate-400 font-mono">
-            <Info className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-            <span>Teal/Xanh: Đồng biến ($r &gt; 0.6$). Đỏ: Nghịch biến ($r &lt; -0.3$).</span>
+          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span>Xanh dương: Đồng biến (r &gt; 0.6). Đỏ sẫm: Nghịch biến (r &lt; -0.3).</span>
           </div>
         </div>
 
         {/* SCATTER DETAIL (5 COLS) */}
-        <div className="lg:col-span-5 p-6 rounded-xl bg-[#06121d]/90 border border-teal-500/15 flex flex-col justify-between shadow-sm">
+        <div className="lg:col-span-5 p-5 rounded-lg bg-[#0f1520] border border-slate-800 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3.5 border-b border-teal-500/10">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5 text-teal-400" />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 text-slate-400" />
                 Phân tán cặp tham số khí hậu
               </span>
               {selectedPair && (
-                <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-teal-950/60 border border-teal-700 text-teal-300">
+                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 tabular-nums">
                   r = {selectedPair.coeff.toFixed(2)}
                 </span>
               )}
@@ -262,11 +262,11 @@ export default function CorrelationPage() {
                   <EChart options={scatterOptions} height={260} />
                 </div>
 
-                <div className="mt-4 p-3.5 rounded-lg bg-[#040a12] border border-teal-500/10 text-xs text-slate-300 space-y-1.5">
-                  <div className="font-semibold text-teal-300 text-[11px] font-mono uppercase tracking-wider">
+                <div className="mt-4 p-3 rounded bg-[#090d14] border border-slate-800/80 text-xs text-slate-300 space-y-1.5">
+                  <div className="font-medium text-slate-200 text-[11px] font-mono uppercase tracking-wider">
                     Nhận định vi khí hậu biển:
                   </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
                     {selectedPair.coeff > 0.6
                       ? `Tương quan đồng biến mạnh: Khi ${selectedPair.var1} tăng thì ${selectedPair.var2} tăng rõ rệt (phù hợp với quy luật các đợt bão swell mùa đông Bắc Thái Bình Dương di chuyển vào vịnh Waimea).`
                       : selectedPair.coeff < -0.3
