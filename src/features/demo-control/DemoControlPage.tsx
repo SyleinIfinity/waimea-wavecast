@@ -15,10 +15,10 @@ import {
   Lock,
   Check,
   Zap,
-  Layers,
-  ArrowRight,
   ShieldCheck,
-  Terminal,
+  Compass,
+  Wind,
+  CloudLightning,
 } from 'lucide-react';
 
 export default function DemoControlPage() {
@@ -129,85 +129,91 @@ export default function DemoControlPage() {
 
   return (
     <div className="space-y-6">
-      {/* PAGE HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.07]">
+      {/* CLIMATE PAGE HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-teal-500/15">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-amber-400 font-medium mb-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            S11 · Kịch bản Kiểm tra Cuối kỳ
+          <div className="flex items-center gap-2 text-xs font-mono text-teal-400 font-medium mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
+            S11 · Diễn tập Thử nghiệm Khí hậu Hải dương
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
             Demo Sandbox: Xóa &amp; Tái tạo Pattern (Gold)
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Minh chứng độc lập: Xóa các kết quả phân tích trong Database (web mất dữ liệu) và gọi API tái tạo qua mô hình đã lưu trên GCS mà <strong className="text-slate-200">không huấn luyện lại</strong>.
+            Môi trường kiểm định cuối kỳ: Mô phỏng mất mát dữ liệu phân tích khí hậu (Gold) và kích hoạt vi dịch vụ tái tạo lại từ kho lưu trữ Silver và mô hình GCS mà <strong className="text-teal-300">không huấn luyện lại</strong>.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#0a1520] border border-white/[0.08] text-xs font-mono text-slate-300 self-start sm:self-auto shrink-0">
-          <Lock className="w-3.5 h-3.5 text-amber-400" />
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-teal-950/40 border border-teal-500/25 text-xs font-mono text-teal-200 self-start sm:self-auto shrink-0 shadow-sm">
+          <Lock className="w-3.5 h-3.5 text-teal-400" />
           <span>Scope: <strong className="text-white">Staging Sandbox</strong></span>
         </div>
       </div>
 
-      {/* METRIC COUNTERS (3 TILES) */}
+      {/* CLIMATE METRIC COUNTERS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* BRONZE */}
-        <div className="p-5 rounded-xl bg-[#09131d] border border-white/[0.07]">
+        <div className="p-5 rounded-xl bg-[#06121d]/90 border border-teal-500/15 shadow-sm">
           <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
-            <span>Bronze Schema</span>
-            <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-1.5 py-0.5 rounded font-mono">
+            <span className="flex items-center gap-1.5">
+              <Compass className="w-3.5 h-3.5 text-teal-400" />
+              Bronze Schema (Raw Feeds)
+            </span>
+            <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-1.5 py-0.5 rounded font-mono font-medium">
               PRESERVED
             </span>
           </div>
-          <div className="text-2xl font-bold font-mono text-white mt-2 tracking-tight">
+          <div className="text-2xl font-bold font-mono text-white mt-2.5 tracking-tight">
             {counts?.bronzeRows.toLocaleString() || '342,150'}
             <span className="text-xs text-slate-500 font-sans font-normal ml-1.5">bản ghi</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            Dữ liệu gốc bất biến từ NOAA NDBC
+            Dữ liệu quan trắc phao NOAA gốc bất biến
           </div>
         </div>
 
         {/* SILVER */}
-        <div className="p-5 rounded-xl bg-[#09131d] border border-white/[0.07]">
+        <div className="p-5 rounded-xl bg-[#06121d]/90 border border-teal-500/15 shadow-sm">
           <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
-            <span>Silver Schema</span>
-            <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-1.5 py-0.5 rounded font-mono">
+            <span className="flex items-center gap-1.5">
+              <Wind className="w-3.5 h-3.5 text-teal-400" />
+              Silver Schema (Chuẩn hóa &amp; QC)
+            </span>
+            <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-1.5 py-0.5 rounded font-mono font-medium">
               PRESERVED
             </span>
           </div>
-          <div className="text-2xl font-bold font-mono text-white mt-2 tracking-tight">
+          <div className="text-2xl font-bold font-mono text-white mt-2.5 tracking-tight">
             {counts?.silverRows.toLocaleString() || '341,820'}
             <span className="text-xs text-slate-500 font-sans font-normal ml-1.5">bản ghi</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            Quan trắc đã chuẩn hóa 14 chỉ số &amp; QC
+            14 chỉ số StdMet, nhiệt độ SST &amp; gió
           </div>
         </div>
 
         {/* GOLD */}
         <div className={`p-5 rounded-xl border transition-all ${
           counts?.goldRows === 0
-            ? 'bg-rose-950/20 border-rose-500/40'
-            : 'bg-[#09131d] border-white/[0.07]'
+            ? 'bg-rose-950/20 border-rose-500/40 shadow-rose-950/20 shadow-lg'
+            : 'bg-[#06121d]/90 border-teal-500/15 shadow-sm'
         }`}>
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400">Gold Schema (Demo Scope)</span>
+            <span className="text-slate-400">Gold Schema (Demo Pattern)</span>
             {counts?.goldRows === 0 ? (
-              <span className="text-[10px] text-rose-400 bg-rose-950/80 border border-rose-700 px-1.5 py-0.5 rounded font-mono font-semibold">
+              <span className="text-[10px] text-rose-400 bg-rose-950/80 border border-rose-700 px-1.5 py-0.5 rounded font-mono font-semibold animate-pulse">
                 ĐÃ XÓA (EMPTY)
               </span>
             ) : (
-              <span className="text-[10px] text-cyan-400 bg-cyan-950/60 border border-cyan-800 px-1.5 py-0.5 rounded font-mono font-semibold">
+              <span className="text-[10px] text-teal-300 bg-teal-950/60 border border-teal-700 px-1.5 py-0.5 rounded font-mono font-semibold">
                 SẴN SÀNG
               </span>
             )}
           </div>
-          <div className={`text-2xl font-bold font-mono mt-2 tracking-tight ${
-            counts?.goldRows === 0 ? 'text-rose-400' : 'text-white'
+          <div className={`text-2xl font-bold font-mono mt-2.5 tracking-tight ${
+            counts?.goldRows === 0 ? 'text-rose-400' : 'text-teal-300'
           }`}>
             {counts?.goldRows === 0 ? '0' : counts?.goldRows.toLocaleString() || '21,286'}
             <span className="text-xs text-slate-500 font-sans font-normal ml-1.5">hàng kết quả</span>
@@ -215,7 +221,7 @@ export default function DemoControlPage() {
           <div className="text-[11px] text-slate-500 mt-2">
             {counts?.goldRows === 0
               ? 'Dữ liệu pattern đã xóa. Bấm Rebuild để khôi phục.'
-              : 'Gồm Metrics, Trend, K-means, Dự báo T+1.'}
+              : 'Gồm Metrics, Mùa vụ, K-means, Dự báo T+1.'}
           </div>
         </div>
       </div>
@@ -223,18 +229,18 @@ export default function DemoControlPage() {
       {/* THREE STEP WORKFLOW CARDS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* PANEL 1: PRESERVED OBJECTS */}
-        <div className="p-5 rounded-xl bg-[#08121b] border border-white/[0.07] flex flex-col justify-between">
+        <div className="p-5 rounded-xl bg-[#06121d]/80 border border-teal-500/15 flex flex-col justify-between shadow-sm">
           <div>
-            <div className="flex items-center gap-2 pb-3 border-b border-white/[0.06]">
+            <div className="flex items-center gap-2 pb-3 border-b border-teal-500/10">
               <span className="w-5 h-5 rounded bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xs font-bold font-mono">
                 1
               </span>
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                Bảng &amp; Artifact Bảo tồn
+                Bảng &amp; Dữ liệu Bảo tồn
               </h2>
             </div>
             <p className="text-[11px] text-slate-400 mt-2.5 mb-3 leading-relaxed">
-              Không có lệnh DROP SCHEMA hay XÓA DATABASE. Toàn bộ bảng nguồn và artifact mô hình được giữ nguyên vẹn.
+              Tuyệt đối không chạy DROP SCHEMA hay XÓA DATABASE. Toàn bộ bảng quan trắc và model trên GCS được bảo vệ.
             </p>
 
             <div className="space-y-1.5">
@@ -248,7 +254,7 @@ export default function DemoControlPage() {
               ].map((item) => (
                 <div
                   key={item.name}
-                  className="p-2.5 rounded-lg bg-[#050c14] border border-white/[0.04] flex items-center justify-between"
+                  className="p-2.5 rounded-lg bg-[#040a12] border border-teal-500/10 flex items-center justify-between"
                 >
                   <div className="min-w-0 pr-2">
                     <div className="font-mono text-xs text-slate-200 truncate">{item.name}</div>
@@ -262,15 +268,15 @@ export default function DemoControlPage() {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-white/[0.05] text-[10px] text-slate-500 leading-normal">
-            *Nếu giảng viên yêu cầu mở DBeaver chạy lệnh DELETE thủ công, trang này vẫn tự động phát hiện số dòng về 0.
+          <div className="mt-4 pt-3 border-t border-teal-500/10 text-[10px] text-slate-500 leading-normal">
+            *Nếu giảng viên yêu cầu mở DBeaver gõ lệnh DELETE thủ công, giao diện vẫn tự động nhận biết số dòng Gold về 0.
           </div>
         </div>
 
         {/* PANEL 2: SELECT PATTERNS & PREVIEW */}
-        <div className="p-5 rounded-xl bg-[#08121b] border border-white/[0.07] flex flex-col justify-between">
+        <div className="p-5 rounded-xl bg-[#06121d]/80 border border-teal-500/15 flex flex-col justify-between shadow-sm">
           <div>
-            <div className="flex items-center gap-2 pb-3 border-b border-white/[0.06]">
+            <div className="flex items-center gap-2 pb-3 border-b border-teal-500/10">
               <span className="w-5 h-5 rounded bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 text-xs font-bold font-mono">
                 2
               </span>
@@ -297,8 +303,8 @@ export default function DemoControlPage() {
                     key={p.id}
                     className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-colors ${
                       isChecked
-                        ? 'bg-[#0d1c2a] border-cyan-500/30 text-slate-100'
-                        : 'bg-[#050c14] border-white/[0.04] text-slate-400 hover:border-white/[0.08]'
+                        ? 'bg-teal-950/30 border-teal-500/30 text-slate-100'
+                        : 'bg-[#040a12] border-teal-500/10 text-slate-400 hover:border-teal-500/20'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
@@ -306,7 +312,7 @@ export default function DemoControlPage() {
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => togglePattern(p.id)}
-                        className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-[#050c14] w-3.5 h-3.5"
+                        className="rounded border-slate-700 text-teal-500 focus:ring-0 bg-[#040a12] w-3.5 h-3.5"
                       />
                       <div>
                         <div className="text-xs font-medium">{p.label}</div>
@@ -331,12 +337,12 @@ export default function DemoControlPage() {
             )}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-white/[0.05]">
+          <div className="mt-4 pt-3 border-t border-teal-500/10">
             {!previewData ? (
               <button
                 type="button"
                 onClick={handlePreview}
-                className="w-full py-2.5 rounded-lg text-xs font-medium bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 border border-white/[0.1] transition-all"
+                className="w-full py-2.5 rounded-lg text-xs font-medium bg-teal-500/10 hover:bg-teal-500/15 text-teal-300 border border-teal-500/30 transition-all"
               >
                 Xem trước phạm vi xóa (Preview)
               </button>
@@ -347,17 +353,17 @@ export default function DemoControlPage() {
                 className="w-full py-2.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-all flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Xác nhận Xóa Gold Demo (2 bước)
+                Mở xác nhận 2 bước xóa Demo
               </button>
             )}
           </div>
         </div>
 
         {/* PANEL 3: REBUILD PATTERNS */}
-        <div className="p-5 rounded-xl bg-[#08121b] border border-white/[0.07] flex flex-col justify-between">
+        <div className="p-5 rounded-xl bg-[#06121d]/80 border border-teal-500/15 flex flex-col justify-between shadow-sm">
           <div>
-            <div className="flex items-center gap-2 pb-3 border-b border-white/[0.06]">
-              <span className="w-5 h-5 rounded bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xs font-bold font-mono">
+            <div className="flex items-center gap-2 pb-3 border-b border-teal-500/10">
+              <span className="w-5 h-5 rounded bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 text-xs font-bold font-mono">
                 3
               </span>
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
@@ -365,7 +371,7 @@ export default function DemoControlPage() {
               </h2>
             </div>
             <p className="text-[11px] text-slate-400 mt-2.5 mb-3 leading-relaxed">
-              Gọi API kích hoạt xử lý lại từ Silver và tải mô hình từ GCS để tính toán lại:
+              Kích hoạt pipeline đọc lại dữ liệu khí tượng từ <code>silver</code>, nạp mô hình từ GCS để suy luận:
             </p>
 
             {deletedSuccess && !activeJob && (
@@ -375,17 +381,17 @@ export default function DemoControlPage() {
             )}
 
             {activeJob ? (
-              <div className="p-4 rounded-lg bg-[#050c14] border border-white/[0.06] space-y-3">
+              <div className="p-4 rounded-lg bg-[#040a12] border border-teal-500/15 space-y-3">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="text-slate-500">Mã Job:</span>
-                  <span className="text-cyan-400 font-semibold">{activeJob.job_id}</span>
+                  <span className="text-teal-300 font-semibold">{activeJob.job_id}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="text-slate-500">Trạng thái:</span>
                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${
                     activeJob.status === 'success'
                       ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                      : 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                      : 'bg-teal-950 text-teal-300 border border-teal-800'
                   }`}>
                     {activeJob.status}
                   </span>
@@ -398,7 +404,7 @@ export default function DemoControlPage() {
                   </div>
                   <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="bg-cyan-400 h-full rounded-full transition-all duration-300"
+                      className="bg-gradient-to-r from-teal-400 to-cyan-500 h-full rounded-full transition-all duration-300"
                       style={{
                         width: `${((activeJob.progress_completed || 1) / (activeJob.progress_total || 4)) * 100}%`,
                       }}
@@ -414,18 +420,18 @@ export default function DemoControlPage() {
                 )}
               </div>
             ) : (
-              <div className="p-6 text-center text-xs text-slate-500 border border-dashed border-white/[0.08] rounded-lg">
+              <div className="p-6 text-center text-xs text-slate-500 border border-dashed border-teal-500/20 rounded-lg">
                 Chưa có tác vụ tái tạo nào đang chạy.
               </div>
             )}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-white/[0.05]">
+          <div className="mt-4 pt-3 border-t border-teal-500/10">
             <button
               type="button"
               onClick={handleRebuild}
               disabled={isRebuilding}
-              className="w-full py-2.5 rounded-lg text-xs font-semibold bg-cyan-500 hover:bg-cyan-400 text-slate-950 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="w-full py-2.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-400 hover:to-cyan-500 text-slate-950 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-md shadow-teal-500/20"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRebuilding ? 'animate-spin' : ''}`} />
               {isRebuilding ? 'Đang gửi Job 202 Polling...' : 'Tái tạo Kết quả Pattern (Rebuild)'}
@@ -437,7 +443,7 @@ export default function DemoControlPage() {
       {/* CONFIRMATION MODAL */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#09131d] border border-rose-500/30 rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
+          <div className="bg-[#06121d] border border-rose-500/30 rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-3 pb-3 border-b border-white/[0.07]">
               <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
                 <AlertTriangle className="w-4 h-4" />
@@ -452,9 +458,9 @@ export default function DemoControlPage() {
               Thao tác này sẽ xóa <strong className="text-rose-400 font-mono">{previewData?.row_count.toLocaleString()}</strong> hàng kết quả trong schema <code>gold</code>. Dữ liệu <code>bronze</code> và <code>silver</code> được bảo toàn.
             </p>
 
-            <div className="p-3 rounded-lg bg-[#050c14] border border-white/[0.06] text-xs">
+            <div className="p-3 rounded-lg bg-[#040a12] border border-teal-500/20 text-xs">
               <span className="text-slate-400 text-[11px]">Vui lòng gõ chính xác dòng chữ sau để mở khóa:</span>
-              <div className="font-mono font-bold text-cyan-400 mt-1 select-all tracking-wider text-xs">
+              <div className="font-mono font-bold text-teal-300 mt-1 select-all tracking-wider text-xs">
                 DELETE GOLD DEMO
               </div>
             </div>
@@ -464,7 +470,7 @@ export default function DemoControlPage() {
               value={confirmInput}
               onChange={(e) => setConfirmInput(e.target.value)}
               placeholder="Gõ 'DELETE GOLD DEMO'"
-              className="w-full px-3 py-2 rounded-lg bg-[#050c14] border border-white/[0.12] text-white text-xs font-mono focus:outline-none focus:border-cyan-400"
+              className="w-full px-3 py-2 rounded-lg bg-[#040a12] border border-teal-500/30 text-white text-xs font-mono focus:outline-none focus:border-teal-400"
             />
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
