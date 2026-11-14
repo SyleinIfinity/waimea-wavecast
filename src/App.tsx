@@ -3,6 +3,7 @@ import DashboardPage from './features/dashboard/DashboardPage';
 import ObservationsPage from './features/observations/ObservationsPage';
 import TimeSeriesPage from './features/time-series/TimeSeriesPage';
 import TrendPage from './features/trend/TrendPage';
+import DataQualityPage from './features/data-quality/DataQualityPage';
 import CorrelationPage from './features/analysis/CorrelationPage';
 import ClusteringPage from './features/clustering/ClusteringPage';
 import ForecastPage from './features/forecast/ForecastPage';
@@ -18,6 +19,7 @@ import {
   Database,
   Activity,
   ShieldAlert,
+  ShieldCheck,
   Compass,
   TableProperties,
   ChartNoAxesCombined,
@@ -29,10 +31,13 @@ import {
   Thermometer,
   Gauge,
   Radio,
+  Menu,
+  X,
 } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('demo');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navSections = [
     {
@@ -58,6 +63,7 @@ export default function App() {
         { id: 'observations', label: 'Observations Explorer', icon: TableProperties, code: 'S02', desc: 'Dữ liệu phao biển thực tế' },
         { id: 'time-series', label: 'Time-Series Analytics', icon: ChartNoAxesCombined, code: 'S03', desc: 'Chuỗi thời gian Khí tượng' },
         { id: 'trend', label: 'Trend & Seasonality', icon: TrendingUpDown, code: 'S04', desc: 'Xu hướng & Mùa vụ Thái Bình Dương' },
+        { id: 'data-quality', label: 'Data Quality & Provenance', icon: ShieldCheck, code: 'S09', desc: 'Độ đầy đủ & Chất lượng dữ liệu' },
       ],
     },
   ];
@@ -68,8 +74,9 @@ export default function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#090d14] text-slate-200 font-sans antialiased">
       {/* ================= SIDEBAR ================= */}
-      <aside className="w-68 flex-none bg-[#0c111a] border-r border-slate-800 flex flex-col justify-between select-none z-20">
-        <div className="p-4 flex flex-col min-h-0">
+      {sidebarOpen && <button type="button" aria-label="Đóng menu điều hướng" className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={() => setSidebarOpen(false)} />}
+      <aside id="main-navigation" className={`fixed inset-y-0 left-0 w-68 flex-none bg-[#0c111a] border-r border-slate-800 flex-col justify-between select-none z-30 md:static md:flex ${sidebarOpen ? 'flex' : 'hidden'}`}>
+        <div className="p-4 flex flex-1 flex-col min-h-0">
           {/* BRAND HEADER */}
           <div className="flex items-center gap-3 px-2 py-2 mb-3 border-b border-slate-800 pb-3">
             <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
@@ -84,6 +91,7 @@ export default function App() {
                 NOAA Buoy 51201
               </div>
             </div>
+            <button type="button" aria-label="Đóng menu" onClick={() => setSidebarOpen(false)} className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center text-slate-400 hover:text-white md:hidden"><X size={18} /></button>
           </div>
 
           {/* TELEMETRY STATUS CHIP */}
@@ -109,7 +117,8 @@ export default function App() {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setActiveTab(item.id)}
+                      onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                      aria-current={isActive ? 'page' : undefined}
                       className={`w-full group text-left px-2.5 py-2 rounded text-xs transition-colors flex items-center justify-between cursor-pointer ${
                         isActive
                           ? 'bg-sky-500/10 text-white font-medium border border-sky-500/30'
@@ -169,19 +178,20 @@ export default function App() {
       {/* ================= MAIN AREA ================= */}
       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         {/* TOP SYSTEM BAR */}
-        <header className="h-12 flex-none border-b border-slate-800 bg-[#0c111a] px-6 flex items-center justify-between text-xs z-10">
-          <div className="flex items-center gap-2 text-slate-400 font-mono text-[11px]">
-            <span className="text-slate-200 font-semibold flex items-center gap-1.5">
+        <header className="min-h-12 flex-none border-b border-slate-800 bg-[#0c111a] px-4 md:px-6 flex items-center justify-between gap-3 text-xs z-10">
+          <button type="button" aria-label="Mở menu điều hướng" aria-controls="main-navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(!sidebarOpen)} className="flex h-11 w-11 shrink-0 items-center justify-center text-slate-300 md:hidden"><Menu size={20} /></button>
+          <div className="flex min-w-0 items-center gap-2 text-slate-400 font-mono text-[11px]">
+            <span className="text-slate-200 font-semibold hidden sm:flex shrink-0 items-center gap-1.5">
               <Waves className="w-3.5 h-3.5 text-sky-400" />
               Waimea Observatory
             </span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-            <span className="text-slate-500">{currentSection?.title}</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-            <span className="text-slate-200 font-medium">{currentItem?.label}</span>
+            <ChevronRight className="hidden lg:block w-3.5 h-3.5 shrink-0 text-slate-600" />
+            <span className="hidden lg:block text-slate-500">{currentSection?.title}</span>
+            <ChevronRight className="hidden sm:block w-3.5 h-3.5 shrink-0 text-slate-600" />
+            <span className="truncate text-slate-200 font-medium">{currentItem?.label}</span>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-mono">
+          <div className="hidden xl:flex items-center gap-4 text-xs font-mono">
             <div className="hidden sm:flex items-center gap-3 text-slate-400 text-[11px]">
               <span className="flex items-center gap-1">
                 <Gauge className="w-3 h-3 text-slate-500" /> Khí áp: <strong className="text-slate-200 tabular-nums">1014.2 hPa</strong>
@@ -200,7 +210,7 @@ export default function App() {
         </header>
 
         {/* MAIN VIEWPORT */}
-        <main className="min-w-0 flex-1 overflow-y-auto p-6 lg:p-8">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto pb-16">
             {/* TL03: DATA MINING & FORECAST */}
             {activeTab === 'forecast' && <ForecastPage />}
@@ -217,6 +227,7 @@ export default function App() {
             {activeTab === 'observations' && <ObservationsPage />}
             {activeTab === 'time-series' && <TimeSeriesPage />}
             {activeTab === 'trend' && <TrendPage />}
+            {activeTab === 'data-quality' && <DataQualityPage />}
           </div>
         </main>
       </div>
