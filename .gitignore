@@ -6,7 +6,7 @@ coverage/
 .env.*
 !.env.example
 .DS_Store
-DB-Review/
+DB-review/
 BE-Review/
 FE-Review/
 PhanCong
