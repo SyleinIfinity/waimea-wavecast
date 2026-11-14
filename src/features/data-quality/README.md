@@ -1,6 +1,6 @@
 # S09 — Data Quality & Provenance (TL02)
 
-Mở menu **Chuỗi dữ liệu Quan trắc (TL02) → Data Quality & Provenance · S09**.
+Mở menu **Dữ liệu quan trắc (TL02) → Chất lượng và nguồn gốc dữ liệu · S09**.
 Trang dùng React, TypeScript, Tailwind CSS, ECharts và Lucide đang có trong dự án;
 không thêm dependency. Sidebar chuyển thành menu thu gọn ở viewport dưới 768px.
 

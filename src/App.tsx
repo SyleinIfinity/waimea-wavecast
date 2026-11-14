@@ -41,29 +41,29 @@ export default function App() {
 
   const navSections = [
     {
-      title: 'Khí hậu & Dự báo Hải văn (TL03)',
+      title: 'Phân tích và dự báo (TL03)',
       items: [
-        { id: 'forecast', label: 'Dự báo & Phân loại', icon: TrendingUp, code: 'S07', desc: 'Hồi quy T+1 (WVHT) & Cấp sóng' },
-        { id: 'correlations', label: 'Ma trận tương quan', icon: Grid, code: 'S05', desc: 'Pearson & Spearman đa biến' },
-        { id: 'clustering', label: 'Phân cụm K-means', icon: Layers, code: 'S06', desc: 'Chế độ vi khí hậu & Centroid' },
-        { id: 'models', label: 'Model Evaluation', icon: Database, code: 'S08', desc: 'Registry & Benchmarks khí hậu' },
+        { id: 'forecast', label: 'Dự báo và phân loại', icon: TrendingUp, code: 'S07', desc: 'Dự báo độ cao sóng ngày kế tiếp và phân loại cấp sóng' },
+        { id: 'correlations', label: 'Ma trận tương quan', icon: Grid, code: 'S05', desc: 'Tương quan Pearson và Spearman giữa các biến quan trắc' },
+        { id: 'clustering', label: 'Phân cụm K-means', icon: Layers, code: 'S06', desc: 'Phân nhóm đặc trưng sóng biển và phân tích tâm cụm' },
+        { id: 'models', label: 'Đánh giá mô hình', icon: Database, code: 'S08', desc: 'Danh mục mô hình và so sánh kết quả đánh giá' },
       ],
     },
     {
-      title: 'Quản trị Trạm & Diễn tập (Admin)',
+      title: 'Quản trị và diễn tập',
       items: [
-        { id: 'demo', label: 'Demo Control Sandbox', icon: ShieldAlert, code: 'S11', desc: 'Xóa & Tái tạo Gold Sandbox' },
-        { id: 'pipeline', label: 'Pipeline Monitor', icon: Activity, code: 'S10', desc: 'Giám sát viễn thám & DAG' },
+        { id: 'demo', label: 'Điều khiển diễn tập', icon: ShieldAlert, code: 'S11', desc: 'Diễn tập xóa và tái tạo kết quả phân tích trong môi trường thử nghiệm' },
+        { id: 'pipeline', label: 'Giám sát luồng xử lý', icon: Activity, code: 'S10', desc: 'Theo dõi quá trình thu thập và xử lý dữ liệu quan trắc' },
       ],
     },
     {
-      title: 'Chuỗi dữ liệu Quan trắc (TL02)',
+      title: 'Dữ liệu quan trắc (TL02)',
       items: [
-        { id: 'dashboard', label: 'Overview Dashboard', icon: Compass, code: 'S01', desc: 'Trạm khí tượng hải dương' },
-        { id: 'observations', label: 'Observations Explorer', icon: TableProperties, code: 'S02', desc: 'Dữ liệu phao biển thực tế' },
-        { id: 'time-series', label: 'Time-Series Analytics', icon: ChartNoAxesCombined, code: 'S03', desc: 'Chuỗi thời gian Khí tượng' },
-        { id: 'trend', label: 'Trend & Seasonality', icon: TrendingUpDown, code: 'S04', desc: 'Xu hướng & Mùa vụ Thái Bình Dương' },
-        { id: 'data-quality', label: 'Data Quality & Provenance', icon: ShieldCheck, code: 'S09', desc: 'Độ đầy đủ & Chất lượng dữ liệu' },
+        { id: 'dashboard', label: 'Tổng quan trạm', icon: Compass, code: 'S01', desc: 'Tổng quan các chỉ số quan trắc tại trạm Waimea' },
+        { id: 'observations', label: 'Tra cứu quan trắc', icon: TableProperties, code: 'S02', desc: 'Tra cứu, lọc và xuất dữ liệu quan trắc phao biển' },
+        { id: 'time-series', label: 'Phân tích chuỗi thời gian', icon: ChartNoAxesCombined, code: 'S03', desc: 'Phân tích dữ liệu theo ngày, tuần và tháng' },
+        { id: 'trend', label: 'Xu hướng và tính mùa vụ', icon: TrendingUpDown, code: 'S04', desc: 'Phân rã chuỗi thời gian thành xu hướng, mùa vụ và phần dư' },
+        { id: 'data-quality', label: 'Chất lượng và nguồn gốc dữ liệu', icon: ShieldCheck, code: 'S09', desc: 'Theo dõi độ đầy đủ, chất lượng và nguồn gốc dữ liệu' },
       ],
     },
   ];
@@ -88,7 +88,7 @@ export default function App() {
               </div>
               <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                NOAA Buoy 51201
+                Phao NOAA 51201
               </div>
             </div>
             <button type="button" aria-label="Đóng menu" onClick={() => setSidebarOpen(false)} className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center text-slate-400 hover:text-white md:hidden"><X size={18} /></button>
@@ -98,9 +98,9 @@ export default function App() {
           <div className="mx-2 mb-3 px-2.5 py-1.5 rounded bg-slate-900 border border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
             <span className="flex items-center gap-1.5 text-slate-300">
               <Radio className="w-3 h-3 text-sky-400" />
-              Chế độ Viễn thám
+              Quan trắc từ xa
             </span>
-            <span className="text-emerald-400 font-medium">24/7 Active</span>
+            <span className="text-slate-400 font-medium">Trạm 51201</span>
           </div>
 
           {/* NAV LIST */}
@@ -117,6 +117,7 @@ export default function App() {
                     <button
                       key={item.id}
                       type="button"
+                      title={item.desc}
                       onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
                       aria-current={isActive ? 'page' : undefined}
                       className={`w-full group text-left px-2.5 py-2 rounded text-xs transition-colors flex items-center justify-between cursor-pointer ${
@@ -131,10 +132,10 @@ export default function App() {
                             isActive ? 'text-sky-400' : 'text-slate-500 group-hover:text-slate-300'
                           }`}
                         />
-                        <span className="truncate">{item.label}</span>
+                        <span className="min-w-0 whitespace-normal leading-5">{item.label}</span>
                       </div>
                       <span
-                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                        className={`ml-2 shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded ${
                           isActive
                             ? 'bg-sky-500/20 text-sky-300 font-medium'
                             : 'text-slate-500 group-hover:text-slate-400'
@@ -160,7 +161,7 @@ export default function App() {
           </div>
           <div className="flex justify-between items-center">
             <span className="flex items-center gap-1.5 text-slate-400">
-              <Clock className="w-3 h-3 text-slate-500" /> Múi giờ Đảo
+              <Clock className="w-3 h-3 text-slate-500" /> Giờ Hawaii
             </span>
             <span className="font-mono text-slate-300">HST (UTC-10)</span>
           </div>
@@ -183,7 +184,7 @@ export default function App() {
           <div className="flex min-w-0 items-center gap-2 text-slate-400 font-mono text-[11px]">
             <span className="text-slate-200 font-semibold hidden sm:flex shrink-0 items-center gap-1.5">
               <Waves className="w-3.5 h-3.5 text-sky-400" />
-              Waimea Observatory
+              Trạm quan trắc Waimea
             </span>
             <ChevronRight className="hidden lg:block w-3.5 h-3.5 shrink-0 text-slate-600" />
             <span className="hidden lg:block text-slate-500">{currentSection?.title}</span>
@@ -198,13 +199,13 @@ export default function App() {
               </span>
               <span className="text-slate-700">|</span>
               <span className="flex items-center gap-1">
-                <Wind className="w-3 h-3 text-slate-500" /> Swell: <strong className="text-slate-200">325° NNW</strong>
+                <Wind className="w-3 h-3 text-slate-500" /> Sóng lừng: <strong className="text-slate-200">325° NNW</strong>
               </span>
             </div>
             <div className="h-3 w-px bg-slate-800"></div>
             <div className="flex items-center gap-1.5 text-emerald-400 text-[11px]">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>NOAA 51201 Telemetry Live</span>
+              <span>Quan trắc phao NOAA 51201</span>
             </div>
           </div>
         </header>
