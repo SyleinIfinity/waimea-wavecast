@@ -106,7 +106,6 @@ export default function TimeSeriesPage() {
   const [rows, setRows] = useState<WaveObservation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isMock, setIsMock] = useState(false)
   const [truncated, setTruncated] = useState(false)
 
   useEffect(() => {
@@ -117,7 +116,6 @@ export default function TimeSeriesPage() {
       .then(result => {
         if (controller.signal.aborted) return
         setRows(result.items)
-        setIsMock(result.isMock)
         setTruncated(result.truncated)
       })
       .catch((reason: unknown) => {
@@ -210,7 +208,7 @@ export default function TimeSeriesPage() {
       <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-400"><Waves size={17} /> S03 · NOAA Station 51201</div>
       <h1 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">Time-Series Analytics</h1>
       <p className="mt-2 text-sm leading-6 text-slate-400">Phân tích sóng biển theo ngày, tuần và tháng; phân bố độ cao sóng và mối quan hệ WVHT–DPD.</p>
-      <div className="mt-4 flex flex-wrap items-center gap-2"><span className="rounded-lg bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300">Station 51201 · UTC aggregation</span><span className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${isMock ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{loading ? 'LOADING' : error ? 'DATA UNAVAILABLE' : isMock ? 'MOCK DATA · NOT NOAA' : 'BACKEND DATA'}</span></div>
+      <div className="mt-4 flex flex-wrap items-center gap-2"><span className="rounded-lg bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300">Station 51201 · UTC aggregation</span><span className={`rounded-lg px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-300`}>{loading ? 'LOADING' : error ? 'DATA UNAVAILABLE' : 'BACKEND DATA'}</span></div>
     </header>
 
     <section className={panel}>
@@ -243,7 +241,6 @@ export default function TimeSeriesPage() {
 
     {error && <div role="alert" className="rounded-xl border border-amber-600/40 bg-amber-500/10 p-4 text-sm text-amber-200">Không thể tải dữ liệu: {error}</div>}
     {truncated && <div className="rounded-xl border border-amber-600/40 bg-amber-500/10 p-4 text-sm text-amber-200">Backend có nhiều hơn 10 trang dữ liệu. Biểu đồ chỉ dựa trên phần dữ liệu đã tải; cần API tổng hợp để hiển thị toàn bộ lịch sử.</div>}
-    {isMock && !loading && <div className="rounded-xl border border-cyan-600/30 bg-cyan-500/5 px-4 py-3 text-xs text-cyan-200">Dữ liệu mô phỏng chỉ dùng để kiểm tra giao diện và tương tác, không phải dữ liệu NOAA hoặc kết quả phân tích khoa học.</div>}
 
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {miniStat('Bản ghi đã tải', observedData ? filtered.length.toLocaleString('vi-VN') : '—')}

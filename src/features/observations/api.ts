@@ -14,7 +14,6 @@ export type Observation = {
 export type ObservationPage = {
   items: Observation[]
   nextCursor: string | null
-  isMock: boolean
 }
 
 export type ObservationFilters = {
@@ -27,91 +26,6 @@ export type ObservationFilters = {
 const BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || ''
 ).replace(/\/+$/, '')
-
-const USE_MOCK =
-  !import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_USE_MOCK === 'true'
-
-const DEMO_COUNT = 55
-const TWO_HOURS = 2 * 60 * 60 * 1000
-
-function delay(ms: number, signal?: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'))
-      return
-    }
-
-    const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort)
-      resolve()
-    }, ms)
-
-    function onAbort() {
-      clearTimeout(timer)
-      reject(new DOMException('Aborted', 'AbortError'))
-    }
-
-    signal?.addEventListener('abort', onAbort, {
-      once: true,
-    })
-  })
-}
-
-function round(value: number, digits = 2) {
-  return Number(value.toFixed(digits))
-}
-
-function createDemoObservations(): Observation[] {
-  const now = Date.now()
-  const anchor = Math.floor(now / 3600000) * 3600000
-
-  return Array.from({ length: DEMO_COUNT }, (_, i) => {
-    const timestamp = anchor - i * TWO_HOURS
-
-    const waveHeight = Math.max(
-      0.4,
-      2.2 +
-        0.85 * Math.sin(i * 0.31) +
-        0.35 * Math.cos(i * 0.13)
-    )
-
-    const dominantPeriod =
-      10.5 +
-      2.4 * Math.sin(i * 0.19) +
-      0.65 * Math.cos(i * 0.4)
-
-    const averagePeriod = dominantPeriod - 2.1
-
-    const direction =
-      (305 + Math.sin(i * 0.22) * 48 + i * 2.5) % 360
-
-    const temperature =
-      25.4 + Math.sin(i * 0.14) * 1.1
-
-    const quality =
-      i % 17 === 0
-        ? 'suspect'
-        : i % 11 === 0
-          ? 'partial'
-          : 'valid'
-
-    return {
-      station_id: '51201',
-      observed_at: new Date(timestamp).toISOString(),
-      wave_height_m: i % 19 === 0 ? null : round(waveHeight),
-      dominant_period_s: i % 13 === 0 ? null : round(dominantPeriod, 1),
-      average_period_s: i % 15 === 0 ? null : round(averagePeriod, 1),
-      wave_direction_deg: Math.round(direction),
-      sea_temperature_c: round(temperature, 1),
-      source: 'TL02 DEMO DATA',
-      quality_flag: quality,
-      revision_no: i % 9 === 0 ? 2 : 1,
-    }
-  })
-}
-
-const demoObservations = createDemoObservations()
 
 function nullableNumber(value: unknown): number | null {
   if (
@@ -172,55 +86,6 @@ export async function getObservations(
   filters: ObservationFilters,
   signal?: AbortSignal
 ): Promise<ObservationPage> {
-  if (USE_MOCK) {
-    await delay(300, signal)
-
-    const from = Date.parse(filters.start)
-    const to = Date.parse(filters.end)
-
-    if (
-      !Number.isFinite(from) ||
-      !Number.isFinite(to) ||
-      from > to
-    ) {
-      throw new Error('Khoảng thời gian lọc không hợp lệ')
-    }
-
-    const filtered = demoObservations.filter((row) => {
-      const time = Date.parse(row.observed_at)
-      return time >= from && time <= to
-    })
-
-    const limit = Math.max(
-      1,
-      Math.min(filters.limit ?? 20, 100)
-    )
-
-    let offset = 0
-
-    if (filters.cursor) {
-      const match = /^mock:(\d+)$/.exec(filters.cursor)
-
-      if (!match) {
-        throw new Error('Cursor mock không hợp lệ')
-      }
-
-      offset = Number(match[1])
-    }
-
-    const items = filtered.slice(offset, offset + limit)
-    const nextOffset = offset + limit
-
-    return {
-      items,
-      nextCursor:
-        nextOffset < filtered.length
-          ? `mock:${nextOffset}`
-          : null,
-      isMock: true,
-    }
-  }
-
   if (!BASE_URL) {
     throw new Error(
       'Chưa cấu hình VITE_API_BASE_URL.'
@@ -312,12 +177,13 @@ export async function getObservations(
     dataObject.next_cursor ??
     null
 
+  if (rows.length === 0) throw new Error("Backend chưa có dữ liệu quan trắc trong khoảng ngày đã chọn.")
+
   return {
     items: rows.map(normalizeObservation),
     nextCursor:
       typeof nextCursor === 'string' && nextCursor.length > 0
         ? nextCursor
         : null,
-    isMock: false,
   }
 }

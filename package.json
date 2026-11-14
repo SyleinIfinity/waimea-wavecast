@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:s09": "node --experimental-strip-types --test src/features/data-quality/quality.test.mjs",
+    "test:api": "node --test src/api/client.test.mjs",
+    "test:s05": "node --test src/features/analysis/data.test.mjs",
+    "test:s09:browser": "node --experimental-strip-types src/features/data-quality/quality.browser-test.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",

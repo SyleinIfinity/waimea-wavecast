@@ -1,5 +1,28 @@
 # TL02 — STATUS REPORT | Frontend Core UI & Data Analytics
 
+## Cập nhật S09 — 2026-11-14
+
+Phần báo cáo bên dưới giữ nguyên hồ sơ snapshot ngày 2026-11-12. Tại mã nguồn
+hiện tại, nhận xét “chưa có Data Quality” của snapshot đó đã được thay thế bằng
+phần triển khai sau. Chưa thay đổi mức nghiệm thu tổng thể TL02: **PARTIAL**.
+
+| Phạm vi S09 | Code path | Minh chứng / giới hạn |
+|---|---|---|
+| Data Quality overview, bộ lọc HST/năm, KPI, coverage tháng, biểu đồ ngày, bảng phân trang, QC severity/status, CSV, provenance | `src/features/data-quality/{DataQualityPage.tsx,api.ts,quality.ts,quality.mock.ts}` | Unit/adapter tests **11/11 PASS**; TypeScript và production build PASS |
+| Menu S09 và sidebar mobile | `src/App.tsx` | Chrome headless với API fixture localhost: chuyển trang, render, CSV, phân trang, bộ lọc, lỗi 503/retry, empty, drawer 360px, không tràn trang, không có uncaught JS exception: PASS |
+| Hợp đồng API | `GET /api/v1/data-quality/overview?start_hst&end_hst` | Đối chiếu code Backend `services/database_api/app/api/public.py`; **chưa gọi/kiểm thử Backend thật** |
+| Missing theo field / gap details / source-file revisions | Chưa có trong DTO overview | Hiển thị thông báo chưa được cung cấp, không tạo dữ liệu giả làm dữ liệu thực |
+
+**Lệnh kiểm tra:** `npm.cmd run test:s09`, `npm.cmd run build`,
+`npm.cmd run test:s09:browser`. Chi tiết môi trường và DTO:
+`src/features/data-quality/README.md`.
+
+**Chưa nghiệm thu:** API thật, end-to-end NOAA → Silver → Frontend và toàn bộ
+các màn hình TL02 còn lại. Browser smoke dùng fixture, không phải bằng chứng
+kết nối NOAA/Cloud SQL. Production S09 không bật mock.
+
+---
+
 **Người thực hiện:** Thành viên 2 — TL02 (Frontend Core UI & Data Analytics); chưa điền họ tên trong tài liệu nguồn.  
 **Nhánh Git:** `feature/tl02-fe-core`  
 **Commit / Pull Request:** `65ec147` — commit S01/S02 đã được người thực hiện xác nhận push lên `origin/feature/tl02-fe-core`; commit và trạng thái push S03/S04 **chưa được xác minh** từ ZIP.  

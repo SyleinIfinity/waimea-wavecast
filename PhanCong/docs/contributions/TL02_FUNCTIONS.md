@@ -1,5 +1,25 @@
 # TL02 — COMPLETED FUNCTIONS | Frontend Core UI & Data Analytics
 
+## Bổ sung S09 — 2026-11-14
+
+Các mục sau được kiểm chứng độc lập cho mã nguồn hiện tại. Phần snapshot
+2026-11-12 phía dưới không bao gồm S09. Không suy rộng kết quả S09 thành nghiệm
+thu toàn bộ TL02 hoặc API thật.
+
+| ID | Component / function | File | Input → Output | Minh chứng |
+|---|---|---|---|---|
+| TL02-S09-01 | `DataQualityPage` | `src/features/data-quality/DataQualityPage.tsx` | Ngày HST, tháng, bộ lọc → KPI, charts, bảng, CSV và trạng thái loading/empty/error | Build PASS; Chrome headless fixture smoke PASS (desktop + 360px) |
+| TL02-S09-02 | `loadQualityOverview` | `src/features/data-quality/api.ts` | Phạm vi ngày + AbortSignal → overview đã kiểm tra hoặc lỗi; chuẩn hóa API URL, dev-only mock | Adapter tests PASS: URL, production guard, HTTP 404/422/503, malformed DTO, abort |
+| TL02-S09-03 | `hstToday`, `validateRange`, `calendarDates`, `parseOverview`, `summarize`, `monthlyQuality`, `csvCell` | `src/features/data-quality/quality.ts` | DTO / dates → thống kê đúng null/0, weighted valid ratio, CSV an toàn | Bộ unit/adapter S09 **11/11 PASS** |
+| TL02-S09-04 | `createQualityMock` | `src/features/data-quality/quality.mock.ts` | Ngày → fixture deterministic, đủ empty/zero/null/missing daily | DTO/fixture tests PASS; không phải số liệu NOAA |
+| TL02-S09-05 | Menu S09 và mobile navigation | `src/App.tsx` | Menu → S09; viewport mobile → sidebar thu gọn | Chrome headless 360px PASS, không tràn chiều ngang trang |
+
+Lệnh: `npm.cmd run test:s09`, `npm.cmd run build`,
+`npm.cmd run test:s09:browser`. Ghi chú: chưa kiểm thử Backend thật; overview
+chưa trả chi tiết missing/gaps/provenance nên chưa nghiệm thu các phần đó.
+
+---
+
 > **Quy tắc nghiệm thu gốc:** Chỉ đưa vào danh mục **đã nghiệm thu** những function/component có code path và bằng chứng test PASS. Các thành phần đã viết nhưng chỉ quan sát qua ảnh/UI được liệt kê **riêng** ở mục *Đã triển khai — chờ nghiệm thu*, không được tính là DONE.
 
 **Ngày đối chiếu:** 2026-11-12  
