@@ -5,7 +5,7 @@ import {
   Database, Download, Filter, Info, RefreshCw, Search, ShieldCheck, Waves,
 } from 'lucide-react'
 import EChart from '../../components/charts/EChart'
-import { loadQualityOverview, qualityMockMode, type QualityResult } from './api'
+import { loadQualityOverview, type QualityResult } from './api'
 import {
   calendarDates, csvCell, hstToday, monthlyQuality, summarize, validateRange,
   type DailyQuality, type QualityRange,
@@ -133,14 +133,14 @@ export default function DataQualityPage() {
     if (!result) return
     downloadCsv(`waimea-s09-daily-${applied.from}-${applied.to}.csv`,
       ['date_hst', 'sample_count', 'valid_wave_count', 'coverage_ratio', 'daily_feature_available', 'data_mode'],
-      visibleDates.map(({ date, day }) => [date, day?.sample_count, day?.valid_wave_count, day?.coverage_ratio, day ? 'yes' : 'no', result.isMock ? 'MOCK - NOT NOAA' : 'BACKEND']))
+      visibleDates.map(({ date, day }) => [date, day?.sample_count, day?.valid_wave_count, day?.coverage_ratio, day ? 'yes' : 'no', 'BACKEND']))
   }
 
   function exportIssues() {
     if (!result) return
     downloadCsv(`waimea-s09-qc-${applied.from}-${applied.to}.csv`,
       ['start_hst', 'end_hst', 'severity', 'status', 'issue_count', 'data_mode'],
-      issues.map(issue => [applied.from, applied.to, issue.severity, issue.status, issue.count, result.isMock ? 'MOCK - NOT NOAA' : 'BACKEND']))
+      issues.map(issue => [applied.from, applied.to, issue.severity, issue.status, issue.count, 'BACKEND']))
   }
 
   return <div className="min-w-0 space-y-6 text-slate-100" aria-busy={loading}>
@@ -153,8 +153,8 @@ export default function DataQualityPage() {
       </div>
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <span className="rounded-lg bg-cyan-500/10 px-3 py-1.5 font-semibold text-cyan-300">Station 51201 · Ngày Hawaii (HST)</span>
-        <span role="status" className={`rounded-lg px-3 py-1.5 font-semibold ${error ? 'bg-rose-500/10 text-rose-300' : result?.isMock || qualityMockMode ? 'bg-amber-500/10 text-amber-300' : 'bg-slate-500/15 text-slate-300'}`}>
-          {loading ? 'ĐANG TẢI...' : error ? 'DATA UNAVAILABLE' : result?.isMock ? 'MOCK DATA · NOT NOAA' : empty ? 'EMPTY DATA' : 'BACKEND DATA'}
+        <span role="status" className={`rounded-lg px-3 py-1.5 font-semibold ${error ? 'bg-rose-500/10 text-rose-300' : 'bg-slate-500/15 text-slate-300'}`}>
+          {loading ? 'ĐANG TẢI...' : error ? 'DATA UNAVAILABLE' : empty ? 'EMPTY DATA' : 'BACKEND DATA'}
         </span>
       </div>
     </header>
@@ -185,8 +185,8 @@ export default function DataQualityPage() {
       <button type="button" className={button + ' mt-4'} onClick={() => setReload(n => n + 1)}><RefreshCw size={15} /> Thử lại</button>
     </section>}
     {loading ? <div className="space-y-5" role="status" aria-label="Đang tải thống kê chất lượng"><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map(i => <div key={i} className="h-32 animate-pulse rounded-2xl bg-[#193b50]" />)}</div><div className="h-72 animate-pulse rounded-2xl bg-[#193b50]" /></div> : result && data && stats && <>
-      <div className={`flex items-start gap-3 rounded-xl border p-4 text-xs leading-6 ${result.isMock ? 'border-amber-500/25 bg-amber-500/5 text-amber-200' : 'border-cyan-500/20 bg-[#09283b] text-cyan-200'}`}>
-        <Info size={17} className="mt-1 shrink-0" /><div>{result.isMock ? 'Dữ liệu mô phỏng để kiểm tra giao diện. Không phải quan trắc NOAA hoặc kết quả QC thực tế.' : 'Dữ liệu tổng hợp từ Backend · chỉ hiển thị các thống kê API cung cấp.'}
+      <div className={`flex items-start gap-3 rounded-xl border p-4 text-xs leading-6 border-cyan-500/20 bg-[#09283b] text-cyan-200`}>
+        <Info size={17} className="mt-1 shrink-0" /><div>Dữ liệu tổng hợp từ Backend · chỉ hiển thị các thống kê API cung cấp.
           <p className="text-slate-400">Màn hình tải lúc {new Intl.DateTimeFormat('vi-VN', { timeZone: 'Pacific/Honolulu', dateStyle: 'short', timeStyle: 'medium' }).format(new Date(result.loadedAt))} HST. Đây là thời điểm tải giao diện, không phải lần thu thập NOAA gần nhất.</p></div>
       </div>
 

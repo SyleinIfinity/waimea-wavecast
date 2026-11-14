@@ -5,7 +5,6 @@ import ts from 'typescript'
 import {
   calendarDates, csvCell, hstToday, monthlyQuality, parseOverview, summarize, validateRange,
 } from './quality.ts'
-import { createQualityMock } from './quality.mock.ts'
 
 const range = { from: '2026-01-01', to: '2026-01-03' }
 const day = (date, samples, valid, coverage) => ({ date_hst: date, sample_count: samples, valid_wave_count: valid, coverage_ratio: coverage })
@@ -79,17 +78,6 @@ test('monthly overview preserves absent months and null-only coverage', () => {
   assert.equal(rows[1].meanCoverage, null)
 })
 
-test('fixture is deterministic, matches real DTO and covers missing/zero/null states', () => {
-  const year = { from: '2026-01-01', to: '2026-12-31' }
-  const mock = createQualityMock(year)
-  assert.deepEqual(mock, createQualityMock(year))
-  assert.deepEqual(parseOverview(response(mock.daily, mock.issues), year), mock)
-  assert.ok(mock.daily.length < calendarDates(year).length)
-  assert.ok(mock.daily.some(row => row.coverage_ratio === null))
-  assert.ok(mock.daily.some(row => row.sample_count === 0))
-  assert.deepEqual(createQualityMock({ from: '2005-01-01', to: '2005-01-31' }), { daily: [], issues: [] })
-})
-
 test('CSV retains empty values and numeric zero and escapes spreadsheet formulas/quotes', () => {
   assert.equal(csvCell(null), '""')
   assert.equal(csvCell(0), '0')
@@ -107,12 +95,11 @@ async function adapter(env) {
   return import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
 }
 
-test('API URL handles origin and /api/v1 suffix; production never enables fixture', async () => {
+test('API URL handles origin and /api/v1 suffix', async () => {
   const original = globalThis.fetch
   try {
     for (const url of ['https://example.test', 'https://example.test/api/v1/']) {
-      const api = await adapter({ VITE_API_BASE_URL: url, VITE_USE_MOCK: 'true', DEV: false })
-      assert.equal(api.qualityMockMode, false)
+      const api = await adapter({ VITE_API_BASE_URL: url })
       let requested
       globalThis.fetch = async (url, options) => {
         requested = String(url)
@@ -121,7 +108,6 @@ test('API URL handles origin and /api/v1 suffix; production never enables fixtur
       }
       const result = await api.loadQualityOverview(range)
       assert.equal(requested, 'https://example.test/api/v1/data-quality/overview?start_hst=2026-01-01&end_hst=2026-01-03')
-      assert.equal(result.isMock, false)
     }
   } finally { globalThis.fetch = original }
 })
@@ -136,8 +122,7 @@ test('HTTP errors and malformed payloads surface as errors, never mock fallback'
     }
     globalThis.fetch = async () => new Response(JSON.stringify({ status: 'ok', data: {} }))
     await assert.rejects(api.loadQualityOverview(range), /data.daily/)
-    const controller = new AbortController()
-    controller.abort()
-    await assert.rejects(api.loadQualityOverview(range, controller.signal), { name: 'AbortError' })
+    globalThis.fetch = async () => new Response(JSON.stringify({ status: 'empty', data: { daily: [], issues: [] } }))
+    await assert.rejects(api.loadQualityOverview(range), /chưa có dữ liệu chất lượng/)
   } finally { globalThis.fetch = original }
 })

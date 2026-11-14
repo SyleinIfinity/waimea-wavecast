@@ -126,7 +126,6 @@ export default function ObservationsPage() {
   const [records, setRecords] = useState<Observation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isMock, setIsMock] = useState(false)
   const [reload, setReload] = useState(0)
 
   useEffect(() => {
@@ -153,7 +152,6 @@ export default function ObservationsPage() {
 
         setRecords(result.items)
         setNextCursor(result.nextCursor)
-        setIsMock(result.isMock)
       } catch (err: unknown) {
         if (controller.signal.aborted) {
           return
@@ -161,7 +159,6 @@ export default function ObservationsPage() {
 
         setRecords([])
         setNextCursor(null)
-        setIsMock(false)
 
         setError(
           err instanceof Error
@@ -465,20 +462,8 @@ export default function ObservationsPage() {
             NOAA 51201 · Waimea Bay
           </span>
 
-          <span
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-              loading
-                ? 'bg-slate-500/10 text-slate-300'
-                : isMock
-                  ? 'bg-amber-500/10 text-amber-300'
-                  : 'bg-emerald-500/10 text-emerald-300'
-            }`}
-          >
-            {loading
-              ? 'LOADING...'
-              : isMock
-                ? 'MOCK DATA MODE'
-                : 'BACKEND MODE'}
+          <span className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
+            {loading ? 'LOADING...' : error ? 'DATA UNAVAILABLE' : 'BACKEND DATA'}
           </span>
 
           <span className="rounded-lg bg-[#17384d] px-3 py-1.5 text-xs text-slate-300">
@@ -592,9 +577,6 @@ export default function ObservationsPage() {
           </label>
         </div>
 
-        <p className="mt-4 text-xs text-slate-500">
-          Khi đang ở Mock Mode, dữ liệu hiển thị chỉ phục vụ demo giao diện và kiểm thử chức năng.
-        </p>
       </section>
 
       {error && (

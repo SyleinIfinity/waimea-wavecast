@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getModelRegistry, getConfusionMatrix } from '../../api/client';
 import type { ModelRegistryItem, ConfusionMatrixData } from '../../api/types';
-import { CheckCircle, Clock, Scale, ShieldCheck } from 'lucide-react';
+import { CheckCircle, Clock, ShieldCheck } from 'lucide-react';
 
 export default function ModelsPage() {
   const [models, setModels] = useState<ModelRegistryItem[]>([]);
@@ -10,23 +10,25 @@ export default function ModelsPage() {
   const [selectedTask, setSelectedTask] = useState<'all' | 'regression' | 'classification' | 'clustering'>('all');
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState<string | null>(null);
+  const [matrixError, setMatrixError] = useState<string | null>(null);
+
   useEffect(() => {
-    Promise.all([getModelRegistry(), getConfusionMatrix()])
-      .then(([m, c]) => {
-        setModels(m);
-        setMatrixData(c);
-      })
+    getModelRegistry()
+      .then(setModels)
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !matrixData) {
-    return (
-      <div className="py-20 text-center text-slate-400">
-        <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-slate-400 border-t-transparent mb-3"></div>
-        <div className="text-xs font-mono">Đang tải danh mục mô hình &amp; benchmark kiểm thử...</div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (activeTab !== 'confusion') return;
+    getConfusionMatrix()
+      .then(setMatrixData)
+      .catch((reason: unknown) => setMatrixError(reason instanceof Error ? reason.message : String(reason)));
+  }, [activeTab]);
+
+  if (loading) return <div className="py-20 text-center text-slate-400">Đang tải danh mục mô hình...</div>;
+  if (error) return <div role="alert" className="rounded-lg border border-rose-800/40 bg-rose-950/20 p-5 text-rose-200">Không thể tải danh mục mô hình: {error}</div>;
 
   const filteredModels = selectedTask === 'all' ? models : models.filter((m) => m.task_type === selectedTask);
 
@@ -161,66 +163,15 @@ export default function ModelsPage() {
         </div>
       )}
 
-      {/* TAB 2: BASELINE COMPARISON */}
       {activeTab === 'comparison' && (
-        <div className="p-5 rounded-lg bg-[#0f1520] border border-slate-800">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Scale className="w-4 h-4 text-slate-400" />
-            <h2 className="text-xs font-medium uppercase tracking-wider text-slate-300">
-              So sánh hiệu năng với Mô hình Cơ sở (Baseline)
-            </h2>
-          </div>
-          <p className="text-xs text-slate-400 mb-5">
-            Chứng minh mô hình Machine Learning thực sự dự báo được biến động hải văn thay vì chỉ lặp lại số liệu ngày hôm trước (Persistence).
-          </p>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left font-mono">
-              <thead className="bg-[#090d14] text-slate-400 uppercase text-[10px] border-b border-slate-800">
-                <tr>
-                  <th className="py-2.5 px-4 font-medium">Tác vụ</th>
-                  <th className="py-2.5 px-4 font-medium">Mô hình ứng viên</th>
-                  <th className="py-2.5 px-4 font-medium">Mô hình Baseline</th>
-                  <th className="py-2.5 px-4 font-medium">MAE (Model vs Base)</th>
-                  <th className="py-2.5 px-4 font-medium">RMSE (Model vs Base)</th>
-                  <th className="py-2.5 px-4 font-medium">R² cải thiện</th>
-                  <th className="py-2.5 px-4 font-medium">Kết luận kiểm thử</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80 text-slate-300">
-                <tr className="hover:bg-slate-800/20">
-                  <td className="py-3 px-4 font-medium text-slate-200">Regression (T+1 WVHT)</td>
-                  <td className="py-3 px-4 text-slate-100">RandomForestRegressor v1</td>
-                  <td className="py-3 px-4 text-slate-500">Persistence (T+0 → T+1)</td>
-                  <td className="py-3 px-4 tabular-nums">
-                    <strong className="text-slate-100">0.285 m</strong> <span className="text-slate-500">vs 0.512 m</span>
-                  </td>
-                  <td className="py-3 px-4 tabular-nums">
-                    <strong className="text-slate-100">0.382 m</strong> <span className="text-slate-500">vs 0.724 m</span>
-                  </td>
-                  <td className="py-3 px-4 text-sky-400 font-medium tabular-nums">
-                    +0.382 (0.814 vs 0.432)
-                  </td>
-                  <td className="py-3 px-4 text-emerald-400 font-medium">Đạt chuẩn nghiệm thu</td>
-                </tr>
-                <tr className="hover:bg-slate-800/20">
-                  <td className="py-3 px-4 font-medium text-slate-200">Classification (Sóng)</td>
-                  <td className="py-3 px-4 text-slate-100">RandomForestClassifier v1</td>
-                  <td className="py-3 px-4 text-slate-500">Majority Class Baseline</td>
-                  <td className="py-3 px-4 tabular-nums" colSpan={2}>
-                    Macro-F1: <strong className="text-slate-100">0.828</strong> vs 0.330
-                  </td>
-                  <td className="py-3 px-4 text-sky-400 font-medium tabular-nums">+150%</td>
-                  <td className="py-3 px-4 text-emerald-400 font-medium">Đạt chuẩn nghiệm thu</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div role="alert" className="rounded-lg border border-amber-800/40 bg-amber-950/20 p-5 text-amber-200">
+          Backend chưa cung cấp bảng so sánh baseline đầy đủ cho giao diện này.
         </div>
       )}
 
       {/* TAB 3: CONFUSION MATRIX */}
-      {activeTab === 'confusion' && (
+      {activeTab === 'confusion' && matrixError && <div role="alert" className="rounded-lg border border-rose-800/40 bg-rose-950/20 p-5 text-rose-200">Không thể tải confusion matrix: {matrixError}</div>}
+      {activeTab === 'confusion' && matrixData && (
         <div className="p-5 rounded-lg bg-[#0f1520] border border-slate-800">
           <div className="flex items-center gap-2 mb-1.5">
             <ShieldCheck className="w-4 h-4 text-slate-400" />
@@ -229,7 +180,7 @@ export default function ModelsPage() {
             </h2>
           </div>
           <p className="text-xs text-slate-400 mb-6">
-            Đánh giá độ chính xác phân loại cấp sóng biển trên 1.100 mẫu kiểm định độc lập (Test Set).
+            Ma trận nhầm lẫn do Backend cung cấp.
           </p>
 
           <div className="max-w-lg mx-auto p-5 rounded-lg bg-[#090d14] border border-slate-800">

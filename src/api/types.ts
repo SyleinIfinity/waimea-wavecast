@@ -34,94 +34,26 @@ export type LatestResponse = {
 };
 
 // ------------------------------------------
-// TL03: S07 - Forecast & Classification DTO
+// S07 - Forward and shadow forecasts published by the Backend
 // ------------------------------------------
-export type WaveForecast = {
-  prediction_id: number;
-  station_id: '51201';
-  target_metric: 'WVHT';
-  target_aggregation: 'daily_median';
-  target_date_hst: string; // YYYY-MM-DD in HST
-  feature_cutoff_date_hst: string; // YYYY-MM-DD
-  issued_at: string; // ISO UTC
-  predicted_value_m: number;
-  lower_m?: number | null;
-  upper_m?: number | null;
-  actual_value_m: number | null;
-  absolute_error_m: number | null;
-  model: {
-    model_id: number;
-    name: string;
-    version: string;
-  };
-  data_quality_status: 'ready' | 'partial' | 'insufficient_data';
-};
+export type ForecastHorizon = '30min' | '1d' | '7d' | '30d';
+export type ForecastSource = 'forward' | 'shadow';
 
-export type ForecastHistoryPoint = {
-  target_date_hst: string;
-  predicted_value_m: number;
-  actual_value_m: number | null;
-  absolute_error_m: number | null;
+export type IssuedForecast = {
+  forecast_id: number;
+  model_id: number;
   model_version: string;
-};
-
-export type ClassificationThreshold = {
-  label: 'Low' | 'Medium' | 'High' | string;
-  min_m: number;
-  max_m: number | null;
-  color?: string;
-};
-
-export type ClassificationScheme = {
-  scheme_id: number;
-  name: string;
-  version: string;
-  thresholds: ClassificationThreshold[];
-};
-
-export type WaveClassification = {
-  classification_id: number;
-  station_id: '51201';
-  target_date_hst: string;
+  horizon: ForecastHorizon;
+  target_kind: string;
   issued_at: string;
-  predicted_label: 'Low' | 'Medium' | 'High' | string;
-  actual_label: string | null;
-  confidence: number | null;
-  class_probabilities?: Record<string, number>;
-  scheme: ClassificationScheme;
-  model: {
-    model_id: number;
-    name: string;
-    version: string;
-  };
-};
-
-// ------------------------------------------
-// TL03: S05 - Correlation Explorer DTO
-// ------------------------------------------
-export type CorrelationCell = {
-  var1: string;
-  var2: string;
-  coefficient: number | null; // -1.0 to 1.0, null if invalid or constant
-  paired_sample_count: number;
-  is_valid: boolean;
-};
-
-export type CorrelationMatrix = {
-  station_id: '51201';
-  period_start_hst: string;
-  period_end_hst: string;
-  method: 'pearson' | 'spearman';
-  variables: string[];
-  matrix: CorrelationCell[][];
-  computed_at: string;
-};
-
-export type ScatterPoint = {
-  x: number;
-  y: number;
-  observed_at: string;
-  date_hst: string;
+  target_at: string;
+  target_date_hst: string | null;
+  predicted_value: number;
+  actual_value: number | null;
+  absolute_error: number | null;
+  evaluated_at: string | null;
+  quality_status: string;
+  source: ForecastSource;
 };
 
 // ------------------------------------------
@@ -132,8 +64,8 @@ export type ClusterAssignment = {
   cluster_id: number; // 0, 1, 2...
   cluster_label?: string; // Hậu kiểm (vd: "Sóng thấp - chu kỳ ngắn")
   distance_to_centroid: number;
-  wave_height_median_m: number;
-  dominant_period_mean_s: number;
+  wave_height_median_m: number | null;
+  dominant_period_mean_s: number | null;
 };
 
 export type CentroidFeature = {
@@ -156,10 +88,10 @@ export type ClusterCentroid = {
 export type ClusteringSummary = {
   model_id: number;
   model_version: string;
-  algorithm: 'K-means';
+  algorithm: string;
   k: number;
-  silhouette_score: number;
-  davies_bouldin_index: number;
+  silhouette_score: number | null;
+  davies_bouldin_index: number | null;
   trained_at: string;
   centroids: ClusterCentroid[];
   assignments: ClusterAssignment[];

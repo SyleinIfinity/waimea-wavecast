@@ -8,13 +8,20 @@ export default function PipelinePage() {
   const [jobs, setJobs] = useState<ProcessingJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = () => {
     setRefreshing(true);
+    setError(null);
     getPipelineStatus()
       .then((data) => {
         setServices(data.services);
         setJobs(data.jobs);
+      })
+      .catch((reason: unknown) => {
+        setServices([]);
+        setJobs([]);
+        setError(reason instanceof Error ? reason.message : String(reason));
       })
       .finally(() => {
         setLoading(false);
@@ -64,6 +71,7 @@ export default function PipelinePage() {
         </button>
       </div>
 
+      {error && <div role="alert" className="rounded-lg border border-rose-800/40 bg-rose-950/20 p-5 text-rose-200">Không thể tải trạng thái pipeline: {error}</div>}
       {/* PIPELINE DAG FLOW TILES */}
       <div className="p-5 rounded-lg bg-[#0f1520] border border-slate-800">
         <h2 className="text-xs font-medium uppercase tracking-wider text-slate-300 mb-4 flex items-center gap-2">

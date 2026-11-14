@@ -20,6 +20,7 @@ import {
 
 export default function DemoControlPage() {
   const [preflight, setPreflight] = useState<DemoPreflight | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPatterns, setSelectedPatterns] = useState<string[]>([
     'time_series',
     'trend_seasonal',
@@ -52,14 +53,19 @@ export default function DemoControlPage() {
         bronzeRows: pf.counts.bronze_rows,
         silverRows: pf.counts.silver_rows,
       });
-    });
+    }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)));
   }, []);
 
   // Polling job tái tạo kết quả
   useEffect(() => {
     if (!activeJob || activeJob.status !== 'running') return;
     const interval = setInterval(async () => {
-      const updated = await pollJobStatus(activeJob.job_id);
+      const updated = await pollJobStatus(activeJob.job_id).catch((reason: unknown) => {
+        setError(reason instanceof Error ? reason.message : String(reason));
+        setIsRebuilding(false);
+        return null;
+      });
+      if (!updated) return;
       setActiveJob(updated);
       if (updated.status === 'success') {
         setIsRebuilding(false);
@@ -86,6 +92,9 @@ export default function DemoControlPage() {
   };
 
   const handlePreview = async () => {
+    if (!preflight) { setError("Chưa có preflight từ Backend."); return; }
+    setError(null);
+    try {
     const res = await previewDeletePatterns({
       station_id: '51201',
       from_hst: '2026-01-01',
@@ -93,18 +102,29 @@ export default function DemoControlPage() {
       pattern_types: selectedPatterns as any,
     });
     setPreviewData(res);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
   };
 
   const handleExecuteDelete = async () => {
-    if (confirmInput !== 'DELETE GOLD DEMO') return;
+    if (confirmInput !== 'DELETE GOLD DEMO' || !previewData?.dry_run_id || !preflight?.allow_delete) return;
     setIsDeleting(true);
     try {
-      await deleteGoldPatterns(previewData?.dry_run_id || 'test');
+      await deleteGoldPatterns(previewData.dry_run_id);
       setShowConfirmModal(false);
       setConfirmInput('');
       setDeletedSuccess(true);
       setPreviewData(null);
-      setCounts((prev) => (prev ? { ...prev, goldRows: 0 } : null));
+      setCounts(null);
+      getDemoPreflight().then((pf) => {
+        setPreflight(pf);
+        setCounts({
+          goldRows: pf.counts.gold_metrics_rows + pf.counts.gold_trend_seasonal_rows + pf.counts.gold_correlations_rows + pf.counts.gold_clustering_rows + pf.counts.gold_predictions_rows + pf.counts.gold_classifications_rows,
+          bronzeRows: pf.counts.bronze_rows,
+          silverRows: pf.counts.silver_rows,
+        });
+      }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setIsDeleting(false);
     }
@@ -112,20 +132,18 @@ export default function DemoControlPage() {
 
   const handleRebuild = async () => {
     setIsRebuilding(true);
-    const res = await rebuildGoldPatterns(selectedPatterns);
-    setActiveJob({
-      job_id: res.job_id,
-      job_type: 'analysis',
-      status: 'running',
-      started_at: new Date().toISOString(),
-      finished_at: null,
-      progress_completed: 1,
-      progress_total: selectedPatterns.length,
-    });
+    try {
+      const res = await rebuildGoldPatterns(selectedPatterns);
+      setActiveJob(await pollJobStatus(res.job_id));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+      setIsRebuilding(false);
+    }
   };
 
   return (
     <div className="space-y-6">
+      {error && <div role="alert" className="rounded-lg border border-rose-800/40 bg-rose-950/20 p-5 text-rose-200">Không thể tải dữ liệu quản trị: {error}</div>}
       {/* PAGE HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
         <div>
@@ -144,7 +162,7 @@ export default function DemoControlPage() {
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300 self-start sm:self-auto shrink-0">
           <Lock className="w-3.5 h-3.5 text-slate-400" />
-          <span>Môi trường: <strong className="text-slate-100 font-medium">Staging Sandbox</strong></span>
+          <span>Môi trường: <strong className="text-slate-100 font-medium">{preflight?.environment ?? 'Chưa xác định'}</strong></span>
         </div>
       </div>
 
@@ -162,7 +180,7 @@ export default function DemoControlPage() {
             </span>
           </div>
           <div className="text-2xl font-semibold font-mono text-slate-100 mt-2.5 tabular-nums">
-            {counts?.bronzeRows.toLocaleString() || '342,150'}
+            {counts?.bronzeRows.toLocaleString() ?? '—'}
             <span className="text-xs text-slate-500 font-sans font-normal ml-1.5">bản ghi</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
@@ -183,7 +201,7 @@ export default function DemoControlPage() {
             </span>
           </div>
           <div className="text-2xl font-semibold font-mono text-slate-100 mt-2.5 tabular-nums">
-            {counts?.silverRows.toLocaleString() || '341,820'}
+            {counts?.silverRows.toLocaleString() ?? '—'}
             <span className="text-xs text-slate-500 font-sans font-normal ml-1.5">bản ghi</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
@@ -206,20 +224,20 @@ export default function DemoControlPage() {
               </span>
             ) : (
               <span className="text-[10px] text-sky-400 bg-sky-950/50 border border-sky-800/50 px-1.5 py-0.5 rounded font-mono font-medium">
-                SẴN SÀNG
+                {counts ? 'CÓ DỮ LIỆU' : 'CHƯA KIỂM CHỨNG'}
               </span>
             )}
           </div>
           <div className={`text-2xl font-semibold font-mono mt-2.5 tabular-nums ${
             counts?.goldRows === 0 ? 'text-rose-400' : 'text-slate-100'
           }`}>
-            {counts?.goldRows === 0 ? '0' : counts?.goldRows.toLocaleString() || '21,286'}
+            {counts?.goldRows.toLocaleString() ?? '—'}
             <span className="text-xs text-slate-500 font-sans font-normal ml-1.5">hàng kết quả</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-2">
             {counts?.goldRows === 0
-              ? 'Dữ liệu pattern đã xóa. Bấm Rebuild để khôi phục.'
-              : 'Gồm Metrics, Mùa vụ, K-means, Dự báo T+1.'}
+              ? 'Backend báo Gold hiện không có bản ghi.'
+              : 'Số bản ghi do Backend cung cấp.'}
           </div>
         </div>
       </div>
@@ -340,6 +358,7 @@ export default function DemoControlPage() {
               <button
                 type="button"
                 onClick={handlePreview}
+                disabled={!preflight}
                 className="w-full py-2 px-3 rounded text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
               >
                 Xem trước phạm vi xóa (Preview)
@@ -428,7 +447,7 @@ export default function DemoControlPage() {
             <button
               type="button"
               onClick={handleRebuild}
-              disabled={isRebuilding}
+              disabled={isRebuilding || !preflight}
               className="w-full py-2 px-3 rounded text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-50 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRebuilding ? 'animate-spin' : ''}`} />
@@ -485,7 +504,7 @@ export default function DemoControlPage() {
               <button
                 type="button"
                 onClick={handleExecuteDelete}
-                disabled={confirmInput !== 'DELETE GOLD DEMO' || isDeleting}
+                disabled={confirmInput !== 'DELETE GOLD DEMO' || isDeleting || !preflight?.allow_delete || !previewData?.dry_run_id}
                 className="px-3.5 py-1.5 rounded text-xs font-medium bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white transition-colors cursor-pointer shadow-sm"
               >
                 {isDeleting ? 'Đang thực thi...' : 'Thực thi Xóa Pattern'}

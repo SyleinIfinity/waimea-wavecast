@@ -1,291 +1,138 @@
-import { useState, useEffect } from 'react';
-import { getCorrelationMatrix, getScatterData } from '../../api/client';
-import type { CorrelationMatrix, ScatterPoint } from '../../api/types';
-import EChart from '../../components/charts/EChart';
-import { Activity, Info } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Activity, Info, RefreshCw } from 'lucide-react';
 import type { EChartsOption } from 'echarts';
+import EChart from '../../components/charts/EChart';
+import {
+  METRICS, correlationMatrix, loadCorrelationSample, scatterPoints,
+  type CorrelationSample, type Method, type Metric,
+} from './data';
 
-const VARIABLE_NAMES: Record<string, string> = {
-  WVHT: 'Độ cao sóng (WVHT)',
-  DPD: 'Chu kỳ sóng trội (DPD)',
-  APD: 'Chu kỳ sóng trung bình (APD)',
-  MWD: 'Hướng sóng chính (MWD)',
-  WTMP: 'Nhiệt độ nước biển (WTMP)',
+const NAMES: Record<Metric, string> = {
+  WVHT: 'Độ cao sóng', DPD: 'Chu kỳ trội', APD: 'Chu kỳ trung bình',
+  WSPD: 'Tốc độ gió', WTMP: 'Nhiệt độ nước biển',
 };
 
+function hstTime(value: string): string {
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Pacific/Honolulu', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(value));
+}
+
 export default function CorrelationPage() {
-  const [method, setMethod] = useState<'pearson' | 'spearman'>('pearson');
-  const [matrixData, setMatrixData] = useState<CorrelationMatrix | null>(null);
-  const [selectedPair, setSelectedPair] = useState<{ var1: string; var2: string; coeff: number } | null>(null);
-  const [scatterPoints, setScatterPoints] = useState<ScatterPoint[]>([]);
+  const [method, setMethod] = useState<Method>('pearson');
+  const [sample, setSample] = useState<CorrelationSample | null>(null);
+  const [selectedPair, setSelectedPair] = useState<{ x: Metric; y: Metric } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
-    getCorrelationMatrix(method)
-      .then((data) => {
-        setMatrixData(data);
-        if (!selectedPair) {
-          setSelectedPair({ var1: 'WVHT', var2: 'DPD', coeff: 0.68 });
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [method]);
+    setError(null);
+    setSample(null);
+    setSelectedPair(null);
+    loadCorrelationSample(controller.signal).then(result => {
+      if (controller.signal.aborted) return;
+      setSample(result);
+      const cells = correlationMatrix(result.rows, 'pearson').flat();
+      const first = cells.find(cell => cell.x !== cell.y && cell.coefficient !== null);
+      if (first) setSelectedPair({ x: first.x, y: first.y });
+    }).catch((reason: unknown) => {
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason));
+    }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [reload]);
 
-  useEffect(() => {
-    if (selectedPair) {
-      getScatterData(selectedPair.var1, selectedPair.var2).then(setScatterPoints);
-    }
-  }, [selectedPair]);
-
-  if (loading || !matrixData) {
-    return (
-      <div className="py-20 text-center text-slate-400">
-        <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-slate-400 border-t-transparent mb-3"></div>
-        <div className="text-xs font-mono">Đang tính ma trận tương quan vi khí hậu biển...</div>
-      </div>
-    );
-  }
-
-  const { variables, matrix } = matrixData;
-
-  const heatmapData: Array<[number, number, number]> = [];
-  matrix.forEach((row, i) => {
-    row.forEach((cell, j) => {
-      heatmapData.push([j, i, cell.coefficient ?? 0]);
-    });
-  });
+  const matrix = useMemo(() => sample ? correlationMatrix(sample.rows, method) : [], [sample, method]);
+  const selectedCell = selectedPair ? matrix[METRICS.indexOf(selectedPair.x)]?.[METRICS.indexOf(selectedPair.y)] : null;
+  const points = useMemo(() => sample && selectedPair ? scatterPoints(sample.rows, selectedPair.x, selectedPair.y) : [], [sample, selectedPair]);
+  const heatmapData: [number, number, number][] = [];
+  matrix.forEach((row, x) => row.forEach((cell, y) => {
+    if (cell.coefficient !== null) heatmapData.push([y, x, cell.coefficient]);
+  }));
 
   const heatmapOptions: EChartsOption = {
     tooltip: {
-      position: 'top',
-      backgroundColor: '#0f1520',
-      borderColor: '#1e2838',
-      borderWidth: 1,
-      textStyle: { color: '#f1f5f9', fontSize: 12 },
+      position: 'top', backgroundColor: '#0f2538', borderColor: '#334155', textStyle: { color: '#e2e8f0' },
       formatter: (params: unknown) => {
         const p = params as { value: [number, number, number] };
-        const v1 = variables[p.value[1]];
-        const v2 = variables[p.value[0]];
-        const cell = matrix[p.value[1]][p.value[0]];
-        return `<div class="p-1 font-mono text-xs">
-          <div class="font-semibold text-slate-200 pb-1 mb-1 border-b border-slate-700/60">${v1} ↔ ${v2}</div>
-          <div>Hệ số tương quan r: <strong class="text-white tabular-nums">${cell.coefficient?.toFixed(2) ?? 'N/A'}</strong></div>
-          <div class="text-slate-400 text-[11px] mt-0.5">Số cặp đo: ${cell.paired_sample_count.toLocaleString()}</div>
-        </div>`;
+        const cell = matrix[p.value[1]]?.[p.value[0]];
+        return cell ? `${cell.x} ↔ ${cell.y}<br/>${method === 'pearson' ? 'r' : 'ρ'} = ${cell.coefficient?.toFixed(3)}<br/>${cell.paired_count} cặp hợp lệ` : '';
       },
     },
-    grid: { left: '8%', right: '4%', bottom: '18%', top: '8%' },
-    xAxis: {
-      type: 'category',
-      data: variables,
-      splitArea: { show: false },
-      axisLine: { lineStyle: { color: '#1e2838' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 },
-    },
-    yAxis: {
-      type: 'category',
-      data: variables,
-      splitArea: { show: false },
-      axisLine: { lineStyle: { color: '#1e2838' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 },
-    },
+    grid: { left: '10%', right: '5%', top: '5%', bottom: '18%' },
+    xAxis: { type: 'category', data: [...METRICS], axisLabel: { color: '#cbd5e1' } },
+    yAxis: { type: 'category', data: [...METRICS], axisLabel: { color: '#cbd5e1' } },
     visualMap: {
-      min: -1,
-      max: 1,
-      calculable: true,
-      orient: 'horizontal',
-      left: 'center',
-      bottom: '0%',
-      inRange: {
-        color: ['#991b1b', '#1e293b', '#0284c7'],
-      },
-      textStyle: { color: '#64748b', fontSize: 10, fontFamily: 'monospace' },
+      min: -1, max: 1, calculable: false, orient: 'horizontal', left: 'center', bottom: 0,
+      inRange: { color: ['#991b1b', '#1e293b', '#0284c7'] }, textStyle: { color: '#94a3b8' },
     },
-    series: [
-      {
-        name: 'Hệ số tương quan',
-        type: 'heatmap',
-        data: heatmapData,
-        label: {
-          show: true,
-          color: '#ffffff',
-          fontFamily: 'monospace',
-          fontSize: 11,
-          formatter: (p: unknown) => {
-            const item = p as { value: [number, number, number] };
-            return item.value[2].toFixed(2);
-          },
-        },
-      },
-    ],
+    series: [{
+      type: 'heatmap', data: heatmapData,
+      label: { show: true, color: '#fff', formatter: (value: unknown) => {
+        const item = value as { value: [number, number, number] };
+        return item.value[2].toFixed(2);
+      } },
+    }],
   };
 
   const scatterOptions: EChartsOption = {
     tooltip: {
-      backgroundColor: '#0f1520',
-      borderColor: '#1e2838',
-      textStyle: { color: '#f1f5f9' },
-      formatter: (p: unknown) => {
-        const pt = p as { value: [number, number] };
-        return `<div class="text-xs font-mono p-1">
-          <div>${selectedPair?.var1}: <strong class="text-white tabular-nums">${pt.value[0]}</strong></div>
-          <div>${selectedPair?.var2}: <strong class="text-sky-400 tabular-nums">${pt.value[1]}</strong></div>
-        </div>`;
+      backgroundColor: '#0f2538', borderColor: '#334155', textStyle: { color: '#e2e8f0' },
+      formatter: (params: unknown) => {
+        const p = params as { data: { value: [number, number]; name: string } };
+        return `${p.data.name}<br/>${selectedPair?.x}: ${p.data.value[0]}<br/>${selectedPair?.y}: ${p.data.value[1]}`;
       },
     },
-    grid: { left: '4%', right: '4%', bottom: '8%', top: '12%', containLabel: true },
-    xAxis: {
-      type: 'value',
-      name: selectedPair?.var1,
-      nameTextStyle: { color: '#64748b', fontFamily: 'monospace', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#162030' } },
-      axisLabel: { color: '#64748b', fontFamily: 'monospace', fontSize: 10 },
-    },
-    yAxis: {
-      type: 'value',
-      name: selectedPair?.var2,
-      nameTextStyle: { color: '#64748b', fontFamily: 'monospace', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#162030' } },
-      axisLabel: { color: '#64748b', fontFamily: 'monospace', fontSize: 10 },
-    },
-    series: [
-      {
-        name: 'Quan sát khí hậu',
-        type: 'scatter',
-        data: scatterPoints.map((s) => [s.x, s.y]),
-        itemStyle: { color: '#0284c7' },
-        symbolSize: 5,
-      },
-    ],
+    grid: { left: '5%', right: '5%', top: '8%', bottom: '12%', containLabel: true },
+    xAxis: { type: 'value', name: selectedPair?.x, axisLabel: { color: '#94a3b8' } },
+    yAxis: { type: 'value', name: selectedPair?.y, axisLabel: { color: '#94a3b8' } },
+    series: [{ type: 'scatter', data: points.map(point => ({ value: [point.x, point.y], name: hstTime(point.observed_at) })), symbolSize: 5, itemStyle: { color: '#0284c7' } }],
   };
 
-  return (
-    <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+  return <div className="space-y-5 text-slate-100">
+    <header className="rounded-xl border border-[#28516a] bg-[#102d43] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-400 font-medium mb-1">
-            <span>S05</span>
-            <span className="text-slate-600">/</span>
-            <span>Correlations</span>
-          </div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-100">
-            Ma trận tương quan &amp; Phân tán (Correlations)
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Phân tích mối liên hệ đa biến giữa độ cao sóng, chu kỳ sóng trội, hướng swell và nhiệt độ nước biển tại trạm 51201.
-          </p>
+          <div className="text-xs font-semibold uppercase tracking-wider text-cyan-300">S05 · NOAA 51201</div>
+          <h1 className="mt-2 text-2xl font-bold">Tương quan và phân tán quan trắc sóng</h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-300">Tính trên các quan trắc Silver có QC valid trong 30 ngày gần nhất. Ma trận và scatter dùng cùng một tập bản ghi; đây là thống kê mô tả, không phải kết quả Gold đã xử lý.</p>
         </div>
-
-        {/* SEGMENTED CONTROL */}
-        <div className="inline-flex items-center p-1 rounded bg-slate-900 border border-slate-800 text-xs font-mono self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => setMethod('pearson')}
-            className={`px-3 py-1 rounded transition-colors cursor-pointer ${
-              method === 'pearson'
-                ? 'bg-slate-800 text-slate-100 font-medium border border-slate-700'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Pearson (Tuyến tính)
-          </button>
-          <button
-            type="button"
-            onClick={() => setMethod('spearman')}
-            className={`px-3 py-1 rounded transition-colors cursor-pointer ${
-              method === 'spearman'
-                ? 'bg-slate-800 text-slate-100 font-medium border border-slate-700'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Spearman (Thứ hạng)
-          </button>
-        </div>
+        <button type="button" onClick={() => setReload(value => value + 1)} disabled={loading} className="flex items-center gap-2 rounded-lg border border-cyan-500/40 px-3 py-2 text-sm text-cyan-200 disabled:opacity-50"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Làm mới</button>
       </div>
+      {sample && <p className="mt-4 text-xs text-slate-400">{sample.rows.length.toLocaleString('vi-VN')} quan trắc QC valid · {hstTime(sample.first_at)} → {hstTime(sample.last_at)} HST{sample.truncated ? ' · Đã chạm giới hạn 5.000 bản ghi; kết quả chỉ trên phần đã tải.' : ''}</p>}
+    </header>
 
-      {/* MAIN TWO COLUMNS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* HEATMAP (7 COLS) */}
-        <div className="lg:col-span-7 p-5 rounded-lg bg-[#0f1520] border border-slate-800 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <h2 className="text-xs font-medium uppercase tracking-wider text-slate-300">
-                Ma trận đối xứng các tham số khí tượng ({method.toUpperCase()})
-              </h2>
-              <span className="text-[11px] font-mono text-slate-500">Click ô để mở Scatter</span>
-            </div>
-
-            <EChart
-              options={heatmapOptions}
-              height={360}
-              onEvents={{
-                click: (params: unknown) => {
-                  const p = params as { value: [number, number, number] };
-                  const v1 = variables[p.value[1]];
-                  const v2 = variables[p.value[0]];
-                  setSelectedPair({ var1: v1, var2: v2, coeff: p.value[2] });
-                },
-              }}
-            />
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center gap-2 text-[11px] text-slate-400 font-mono">
-            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span>Xanh dương: Đồng biến (r &gt; 0.6). Đỏ sẫm: Nghịch biến (r &lt; -0.3).</span>
-          </div>
-        </div>
-
-        {/* SCATTER DETAIL (5 COLS) */}
-        <div className="lg:col-span-5 p-5 rounded-lg bg-[#0f1520] border border-slate-800 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5 text-slate-400" />
-                Phân tán cặp tham số khí hậu
-              </span>
-              {selectedPair && (
-                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 tabular-nums">
-                  r = {selectedPair.coeff.toFixed(2)}
-                </span>
-              )}
-            </div>
-
-            {selectedPair ? (
-              <div className="mt-4">
-                <div className="text-xs font-mono font-medium text-slate-300">
-                  {VARIABLE_NAMES[selectedPair.var1] || selectedPair.var1} ↔ {VARIABLE_NAMES[selectedPair.var2] || selectedPair.var2}
-                </div>
-
-                <div className="mt-2">
-                  <EChart options={scatterOptions} height={260} />
-                </div>
-
-                <div className="mt-4 p-3 rounded bg-[#090d14] border border-slate-800/80 text-xs text-slate-300 space-y-1.5">
-                  <div className="font-medium text-slate-200 text-[11px] font-mono uppercase tracking-wider">
-                    Nhận định vi khí hậu biển:
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    {selectedPair.coeff > 0.6
-                      ? `Tương quan đồng biến mạnh: Khi ${selectedPair.var1} tăng thì ${selectedPair.var2} tăng rõ rệt (phù hợp với quy luật các đợt bão swell mùa đông Bắc Thái Bình Dương di chuyển vào vịnh Waimea).`
-                      : selectedPair.coeff < -0.3
-                      ? `Tương quan nghịch biến: Khi ${selectedPair.var1} tăng thì ${selectedPair.var2} giảm (mùa đông sóng cao thường đi kèm nhiệt độ mặt biển SST hạ nhiệt).`
-                      : `Mối tương quan tuyến tính yếu giữa ${selectedPair.var1} và ${selectedPair.var2}.`}
-                  </p>
-                  <p className="text-[10px] text-slate-500 italic">
-                    *Tương quan thống kê không đồng nghĩa với quan hệ nguyên nhân - kết quả.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="py-16 text-center text-slate-500 text-xs font-mono">
-                Chọn một ô trong ma trận để xem phân tán.
-              </div>
-            )}
-          </div>
-        </div>
+    {error && <div role="alert" className="rounded-lg border border-rose-800/40 bg-rose-950/20 p-4 text-sm text-rose-200">Không thể tải S05: {error}</div>}
+    {loading && <div role="status" className="py-12 text-center text-slate-400">Đang tải quan trắc thật từ Backend...</div>}
+    {!loading && sample && <>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => setMethod('pearson')} aria-pressed={method === 'pearson'} className={`rounded-lg border px-3 py-2 text-xs ${method === 'pearson' ? 'border-cyan-500 text-cyan-200' : 'border-slate-700 text-slate-400'}`}>Pearson · tuyến tính</button>
+        <button type="button" onClick={() => setMethod('spearman')} aria-pressed={method === 'spearman'} className={`rounded-lg border px-3 py-2 text-xs ${method === 'spearman' ? 'border-cyan-500 text-cyan-200' : 'border-slate-700 text-slate-400'}`}>Spearman · thứ hạng</button>
       </div>
-    </div>
-  );
+      <div className="grid gap-5 lg:grid-cols-12">
+        <section className="rounded-xl border border-slate-700 bg-[#0f2538] p-5 lg:col-span-7">
+          <h2 className="text-sm font-semibold">Ma trận {method === 'pearson' ? 'Pearson r' : 'Spearman ρ'}</h2>
+          <p className="mt-1 text-xs text-slate-400">Chọn ô có hệ số để xem scatter. Ô trống nghĩa là chưa đủ cặp hoặc biến không thay đổi.</p>
+          {heatmapData.length ? <EChart options={heatmapOptions} height={360} onEvents={{ click: (params: unknown) => {
+            const p = params as { value: [number, number, number] };
+            const x = METRICS[p.value[1]];
+            const y = METRICS[p.value[0]];
+            if (x !== y) setSelectedPair({ x, y });
+          } }} /> : <p role="alert" className="mt-6 text-sm text-amber-200">Không đủ dữ liệu cặp biến để tính hệ số tương quan.</p>}
+        </section>
+        <section className="rounded-xl border border-slate-700 bg-[#0f2538] p-5 lg:col-span-5">
+          <h2 className="flex items-center gap-2 text-sm font-semibold"><Activity size={16} /> Phân tán quan trắc</h2>
+          {selectedPair && selectedCell && selectedCell.coefficient !== null ? <>
+            <p className="mt-2 text-xs text-slate-300">{NAMES[selectedPair.x]} ↔ {NAMES[selectedPair.y]} · {method === 'pearson' ? 'r' : 'ρ'} = {selectedCell.coefficient.toFixed(3)} · {selectedCell.paired_count.toLocaleString('vi-VN')} cặp</p>
+            <EChart options={scatterOptions} height={310} />
+            <p className="mt-2 text-xs text-slate-400">Mỗi điểm là một quan trắc có đủ cả hai biến. Hệ số tương quan không chứng minh quan hệ nguyên nhân.</p>
+          </> : <p className="mt-6 text-sm text-amber-200">Chưa có cặp biến đủ dữ liệu để hiển thị scatter.</p>}
+        </section>
+      </div>
+      <div className="flex items-start gap-2 rounded-xl border border-cyan-500/20 bg-[#09283b] p-4 text-xs leading-5 text-cyan-200"><Info size={16} className="mt-0.5 shrink-0" /><p>Hệ số tính theo từng cặp từ các giá trị không thiếu; số cặp có thể khác nhau. Hướng sóng MWD là biến góc nên không đưa vào phép tương quan tuyến tính này. WSPD là tốc độ gió đo được.</p></div>
+    </>}
+  </div>;
 }

@@ -9,13 +9,16 @@ export default function ClusteringPage() {
   const [summary, setSummary] = useState<ClusteringSummary | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getClusteringSummary()
       .then(setSummary)
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)))
       .finally(() => setLoading(false));
   }, []);
 
+  if (error) return <div role="alert" className="rounded-lg border border-rose-800/40 bg-rose-950/20 p-5 text-rose-200">Không thể tải phân cụm: {error}</div>;
   if (loading || !summary) {
     return (
       <div className="py-20 text-center text-slate-400">
@@ -29,13 +32,13 @@ export default function ClusteringPage() {
 
   const radarIndicators = centroids[0].features.map((f) => ({
     name: f.label,
-    min: -2,
-    max: 2.5,
+    min: Math.min(0, ...centroids.map(c => c.features.find(v => v.feature_name === f.feature_name)?.original_value ?? 0)) * 1.1,
+    max: Math.max(1, ...centroids.map(c => c.features.find(v => v.feature_name === f.feature_name)?.original_value ?? 0)) * 1.1,
   }));
 
   const radarSeriesData = centroids.map((c) => ({
     name: c.cluster_label,
-    value: c.features.map((f) => f.z_score),
+    value: c.features.map((f) => f.original_value),
     itemStyle: { color: c.color },
     areaStyle: { opacity: 0.15 },
   }));
@@ -85,9 +88,9 @@ export default function ClusteringPage() {
         const item = assignments[p.dataIndex];
         return `<div class="p-1 text-xs font-mono">
           <div class="font-semibold text-slate-200 pb-1 mb-1 border-b border-slate-700/60">${item.date_hst} (HST)</div>
-          <div>Chế độ: <strong style="color:${centroids[item.cluster_id].color}">${item.cluster_label}</strong></div>
-          <div>Độ cao sóng: <strong class="text-white tabular-nums">${item.wave_height_median_m.toFixed(2)} m</strong></div>
-          <div>Chu kỳ sóng: <strong class="text-white tabular-nums">${item.dominant_period_mean_s.toFixed(1)} s</strong></div>
+          <div>Chế độ: <strong style="color:${centroids.find(c => c.cluster_id === item.cluster_id)?.color ?? '#94a3b8'}">${item.cluster_label}</strong></div>
+          <div>Độ cao sóng: <strong class="text-white tabular-nums">${item.wave_height_median_m?.toFixed(2) ?? 'N/A'} m</strong></div>
+          <div>Chu kỳ sóng: <strong class="text-white tabular-nums">${item.dominant_period_mean_s?.toFixed(1) ?? 'N/A'} s</strong></div>
           <div class="text-slate-500 text-[10px] mt-0.5">Khoảng cách tới tâm: ${item.distance_to_centroid}</div>
         </div>`;
       },
@@ -113,7 +116,7 @@ export default function ClusteringPage() {
         barMaxWidth: 12,
         data: assignments.map((a) => ({
           value: a.wave_height_median_m,
-          itemStyle: { color: centroids[a.cluster_id].color },
+          itemStyle: { color: centroids.find(c => c.cluster_id === a.cluster_id)?.color ?? '#94a3b8' },
         })),
       },
     ],
@@ -141,12 +144,12 @@ export default function ClusteringPage() {
         <div className="flex items-center gap-3 px-3 py-1.5 rounded bg-slate-900 border border-slate-800 text-xs font-mono self-start sm:self-auto">
           <div>
             <span className="text-slate-500 text-[10px]">Silhouette:</span>
-            <span className="ml-1.5 text-slate-100 font-medium tabular-nums">{silhouette_score}</span>
+            <span className="ml-1.5 text-slate-100 font-medium tabular-nums">{silhouette_score ?? 'N/A'}</span>
           </div>
           <div className="h-3 w-px bg-slate-800"></div>
           <div>
             <span className="text-slate-500 text-[10px]">Davies-Bouldin:</span>
-            <span className="ml-1.5 text-slate-100 font-medium tabular-nums">{davies_bouldin_index}</span>
+            <span className="ml-1.5 text-slate-100 font-medium tabular-nums">{davies_bouldin_index ?? 'N/A'}</span>
           </div>
           <div className="h-3 w-px bg-slate-800"></div>
           <div>
@@ -206,7 +209,7 @@ export default function ClusteringPage() {
                 Đặc trưng tâm cụm khí hậu (Centroid Profile)
               </h2>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Các chỉ số đã được chuẩn hóa Z-score để so sánh tương đối giữa các biến độ cao sóng, chu kỳ và nhiệt độ.
+                Giá trị đặc trưng tâm cụm do Backend trả về.
               </p>
             </div>
 

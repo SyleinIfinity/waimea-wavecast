@@ -137,7 +137,6 @@ export default function TrendPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<TrendPoint[]>([])
-  const [isMock, setIsMock] = useState(false)
   const [method, setMethod] = useState('')
   const [period, setPeriod] = useState(12)
   const [note, setNote] = useState('')
@@ -148,7 +147,7 @@ export default function TrendPage() {
     setLoading(true); setError(null); setData([])
     loadTrend(applied, controller.signal).then(result => {
       if (controller.signal.aborted) return
-      setData(result.items); setIsMock(result.isMock)
+      setData(result.items)
       setMethod(result.method); setPeriod(result.seasonalPeriod); setNote(result.note)
       setZoom([0, 100]); setPage(1)
     }).catch((reason: unknown) => {
@@ -193,7 +192,7 @@ export default function TrendPage() {
   function exportCSV() {
     if (!sufficient || loading) return
     const headers = ['STT', 'Month (UTC)', 'Observed', 'Trend', 'Seasonal', 'Residual', 'Unit', 'Data Mode']
-    const lines = data.map((r, i) => [i + 1, r.period, r.observed, r.trend, r.seasonal, r.residual, meta[applied.metric].unit, isMock ? 'MOCK DATA - NOT NOAA' : 'BACKEND'].map(csvValue).join(','))
+    const lines = data.map((r, i) => [i + 1, r.period, r.observed, r.trend, r.seasonal, r.residual, meta[applied.metric].unit, 'BACKEND'].map(csvValue).join(','))
     saveText(`waimea-s04-${applied.metric}-${applied.from}-${applied.to}.csv`, [headers.join(','), ...lines].join('\r\n'))
   }
 
@@ -212,7 +211,7 @@ export default function TrendPage() {
         backgroundColor: '#0a2032',
         title: {
           text: `Waimea WaveCast · S04 | ${applied.metric} | ${applied.from} → ${applied.to}`,
-          subtext: `${isMock ? 'MOCK DATA · NOT NOAA' : 'BACKEND DATA'}  |  ${method}  |  Period: ${period} months`,
+          subtext: `BACKEND DATA  |  ${method}  |  Period: ${period} months`,
           left: 62, top: 18,
           textStyle: { color: '#e6f3ff', fontSize: 24 },
           subtextStyle: { color: '#afc4d3', fontSize: 13 },
@@ -237,7 +236,7 @@ export default function TrendPage() {
           areaStyle: (p.key === 'observed' || p.key === 'trend') ? { color: p.color, opacity: 0.07 } : undefined,
         })),
         graphic: [{ type: 'text', left: 104, bottom: 28, style: {
-          text: `Export: ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC · ${data.length} monthly records · ${isMock ? 'SIMULATED DATA' : 'BACKEND DATA'}`,
+          text: `Export: ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC · ${data.length} monthly records · BACKEND DATA`,
           fill: '#b0c6d5', font: '14px sans-serif',
         } }],
       }
@@ -263,7 +262,7 @@ export default function TrendPage() {
         <p className="mt-2 text-sm text-[#9bb8cd]">Phân rã chuỗi thời gian: quan trắc, xu hướng, mùa vụ và phần dư. Không phải dự báo tương lai.</p>
         <div className="mt-4 flex flex-wrap gap-2 text-xs">
           <span className="rounded-md bg-cyan-500/10 px-3 py-1.5 text-cyan-300">Station 51201 · Monthly</span>
-          <span className={`rounded-md px-3 py-1.5 font-bold ${isMock ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{loading ? 'LOADING...' : error ? 'NO DATA / ERROR' : isMock ? 'MOCK DATA · NOT NOAA' : 'BACKEND DATA'}</span>
+          <span className={`rounded-md px-3 py-1.5 font-bold bg-emerald-500/10 text-emerald-300`}>{loading ? 'LOADING...' : error ? 'NO DATA / ERROR' : 'BACKEND DATA'}</span>
         </div>
       </section>
 
@@ -289,10 +288,10 @@ export default function TrendPage() {
             <button type="button" onClick={exportPNG} disabled={!sufficient || loading || exportBusy} className="flex items-center gap-2 rounded-xl border border-cyan-500/40 px-3 py-2.5 text-sm text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-30"><FileImage size={15}/> {exportBusy ? 'Đang xuất...' : 'Xuất PNG'}</button>
           </div>
         </div>
-        <p className="mt-3 text-xs text-slate-400">Tháng nhập dạng MM/YYYY. Demo cần ít nhất 36 tháng liên tục để phân rã. Khoảng thời gian áp dụng theo tháng UTC.</p>
+        <p className="mt-3 text-xs text-slate-400">Tháng nhập dạng MM/YYYY. Backend cần dữ liệu đủ để phân rã. Khoảng thời gian áp dụng theo tháng UTC.</p>
       </section>
 
-      <div className="flex items-start gap-2 rounded-xl border border-cyan-500/20 bg-[#09283b] p-3 text-xs leading-5 text-cyan-200"><Info size={16} className="mt-0.5 shrink-0"/> {error ? 'Backend lỗi sẽ không tự thay bằng mock. Kiểm tra bộ lọc hoặc kết nối.' : isMock ? 'MOCK DATA · Tất cả giá trị và thành phần phân rã chỉ để kiểm thử Frontend, không phải số liệu NOAA.' : 'Chế độ Backend: dữ liệu dự kiến từ endpoint trend-seasonal.'}</div>
+      <div className="flex items-start gap-2 rounded-xl border border-cyan-500/20 bg-[#09283b] p-3 text-xs leading-5 text-cyan-200"><Info size={16} className="mt-0.5 shrink-0"/> Chỉ hiển thị dữ liệu từ Backend. Kiểm tra bộ lọc hoặc kết nối nếu có lỗi.</div>
       {error && <div role="alert" className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-4 text-sm text-amber-200"><strong>Thông báo S04:</strong> {error}</div>}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -339,7 +338,7 @@ export default function TrendPage() {
       <section className={panel}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2"><Table2 size={18} className="text-cyan-400"/><h2 className="font-bold">Decomposition Details</h2></div>
-          <span className="text-xs text-slate-400">{data.length} tháng · {meta[applied.metric].unit} · {isMock ? 'Mock Data' : 'Backend'}</span>
+          <span className="text-xs text-slate-400">{data.length} tháng · {meta[applied.metric].unit} · Backend</span>
         </div>
         <div className="overflow-x-auto rounded-xl border border-[#31556b]">
           <table className="w-full min-w-[850px] text-left text-xs">
@@ -380,7 +379,6 @@ export default function TrendPage() {
           <p><strong>Trend:</strong> trung bình trượt 12 tháng căn giữa; thiếu ở hai đầu chuỗi.</p>
           <p><strong>Seasonal:</strong> sai lệch lặp lại theo tháng sau khi trừ Trend (additive).</p>
           <p><strong>Residual:</strong> Observed − Trend − Seasonal; không nội suy tháng thiếu.</p>
-          <p><strong>Giới hạn:</strong> kết quả Mock chỉ để thử giao diện; không dùng để kết luận khí tượng hoặc dự đoán sóng.</p>
         </div>}
       </section>
     </div>

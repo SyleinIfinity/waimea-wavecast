@@ -26,17 +26,13 @@ DTO đối chiếu từ `waimea-wavecast-api/services/database_api/app/api/publi
 }
 ```
 
-Ví dụ trên chỉ minh họa cấu trúc. API chưa được nghiệm thu với dữ liệu thật trong
-lần triển khai này. Hỗ trợ `status: empty` với hai danh sách rỗng; numeric strings
+Ví dụ trên chỉ minh họa cấu trúc. API đã được gọi kiểm tra với dữ liệu thật.
+`status: empty` với hai danh sách rỗng được báo là chưa có dữ liệu. Numeric strings
 từ PostgreSQL được kiểm tra và chuyển thành số. Phản hồi sai cấu trúc, HTTP lỗi
-và request hủy không được thay bằng mock.
+và request hủy được báo lỗi.
 
 - `VITE_API_BASE_URL` nhận origin hoặc URL kết thúc bằng `/api/v1`.
-- Khi chạy Vite dev, thiếu URL hoặc `VITE_USE_MOCK=true` bật fixture có nhãn
-  **MOCK DATA · NOT NOAA**. Ví dụ chọn năm 2005 để kiểm tra trạng thái rỗng của
-  fixture; điều này không xác nhận nguồn NOAA thực tế có/không có dữ liệu.
-- Production luôn gọi API; fixture S09 chỉ được import trong nhánh dev và bị
-  loại khỏi build production. Không đổi cơ chế mock của các trang khác.
+- Thiếu `VITE_API_BASE_URL` sẽ báo lỗi cấu hình. Không có nguồn dữ liệu mẫu cho giao diện.
 - Bộ lọc dùng ngày `Pacific/Honolulu`; không cho chọn tương lai hoặc khoảng
   chênh lệch lớn hơn 366 ngày, phù hợp giới hạn mặc định Backend.
 
@@ -49,7 +45,7 @@ và request hủy không được thay bằng mock.
 - Chọn tháng lọc biểu đồ và bảng ngày. Biểu đồ biểu diễn mẫu WVHT và coverage
   trên hai trục riêng; ngày thiếu bản ghi được để trống.
 - Bảng ngày có tìm kiếm, bộ lọc trạng thái, phân trang; CSV xuất toàn bộ ngày
-  phù hợp bộ lọc, kèm ngày HST, cờ có bản ghi và nguồn mock/backend.
+  phù hợp bộ lọc, kèm ngày HST, cờ có bản ghi và nguồn Backend.
 - Tổng hợp issue có lọc severity/status và CSV riêng, luôn tính trên toàn
   khoảng ngày truy vấn; không bị lọc theo tháng của biểu đồ.
 - WVHT chưa hợp lệ không đồng nghĩa missing. Ngày chưa có daily feature không
@@ -72,16 +68,16 @@ npm.cmd run test:s09:browser
 ```
 
 Unit/adapter tests: HST qua nửa đêm/năm mới, ngày nhuận, giới hạn query, null/0,
-DTO sai, tỷ lệ có trọng số, coverage null, mock deterministic, CSV escaping,
-base URL, production mock guard, HTTP 404/422/503 và abort.
+DTO sai, tỷ lệ có trọng số, coverage null, CSV escaping,
+base URL, HTTP 404/422/503 và trạng thái không có dữ liệu.
 
 Browser smoke dùng Chrome headless qua CDP và API fixture trên localhost, không
 gọi Backend/NOAA thật. Mặc định tìm Chrome trong `C:/Program Files/Google/Chrome/`;
 có thể cấu hình biến `S09_BROWSER_PATH` tới browser Chromium tương ứng. Kiểm tra
-menu S09, render API, CSV, phân trang, bộ lọc, lỗi 503/retry, empty, drawer 360px,
+menu S09, render API, CSV, phân trang, bộ lọc, lỗi 503/retry, empty/error, drawer 360px,
 overflow và lỗi JavaScript. Ảnh desktop/charts/mobile và CSV được ghi vào thư mục
-temp được in khi chạy xong. Browser smoke cần bản `dist` vừa build không đặt
-`VITE_API_BASE_URL`, để API đi qua fixture cùng origin.
+temp được in khi chạy xong. Browser smoke cần bản `dist` vừa build đặt
+`VITE_API_BASE_URL=/api/v1`, để API đi qua fixture cùng origin.
 
 Build PASS không đồng nghĩa tích hợp Backend thật đã PASS. Các báo cáo TL02
 tổng thể vẫn PARTIAL cho đến khi các yêu cầu còn lại được nghiệm thu riêng.

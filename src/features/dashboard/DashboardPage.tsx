@@ -17,10 +17,6 @@ import {
 import { loadLatest } from '../../api/client'
 import type { LatestObservation } from '../../api/types'
 
-const isMockMode =
-  !import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_USE_MOCK === 'true'
-
 function formatValue(
   value: number | null | undefined,
   unit: string,
@@ -182,22 +178,12 @@ export default function DashboardPage() {
             </p>
 
             <p className="mt-1 text-xs text-slate-400">
-              {isMockMode
-                ? 'Demo Mode · Dữ liệu mô phỏng'
-                : 'API Mode · Kết nối Backend'}
+              Kết nối Backend
             </p>
           </div>
         </div>
 
-        <span
-          className={`rounded-full border px-3 py-1.5 text-xs font-bold ${
-            isMockMode
-              ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-              : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
-          }`}
-        >
-          {isMockMode ? 'MOCK DATA' : 'API MODE'}
-        </span>
+        <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold text-cyan-300">API MODE</span>
       </div>
 
       {/* ERROR */}

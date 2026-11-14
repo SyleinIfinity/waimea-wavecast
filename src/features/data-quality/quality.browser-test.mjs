@@ -4,7 +4,7 @@ import { resolve, extname, sep } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawn } from 'node:child_process'
 import assert from 'node:assert/strict'
-import { createQualityMock } from './quality.mock.ts'
+import { calendarDates } from './quality.ts'
 
 // Run from the frontend root after npm run build. This serves local fixtures,
 // never the live NOAA/API service. S09_BROWSER_PATH can override Chrome's path.
@@ -20,7 +20,7 @@ const server = createServer(async (req, res) => {
       requests.push(url.search)
       res.setHeader('Content-Type', 'application/json')
       if (scenario === 'error') { res.writeHead(503); res.end('{}'); return }
-      const data = scenario === 'empty' ? { daily: [], issues: [] } : createQualityMock({ from: url.searchParams.get('start_hst'), to: url.searchParams.get('end_hst') })
+      const data = scenario === 'empty' ? { daily: [], issues: [] } : { daily: calendarDates({ from: url.searchParams.get('start_hst'), to: url.searchParams.get('end_hst') }).map((date, i) => ({ date_hst: date, sample_count: 2, valid_wave_count: 1, coverage_ratio: i % 7 === 0 ? null : 0.5 })), issues: [] }
       res.end(JSON.stringify({ status: scenario === 'empty' ? 'empty' : 'ok', data })); return
     }
     const path = resolve(root, '.' + decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname))
@@ -105,10 +105,9 @@ try {
   assert.equal(await evaluate(`document.querySelectorAll('main table').length`), 0)
   scenario = 'empty'
   await clickText('Thử lại')
-  await until(`document.body.textContent.includes('EMPTY DATA')`)
-  assert.ok(await evaluate(`document.body.textContent.includes('Chưa có thống kê chất lượng')`))
+  await until(`document.body.textContent.includes('Backend chưa có dữ liệu chất lượng')`)
   scenario = 'ready'
-  await clickText('Làm mới')
+  await clickText('Thử lại')
   await until(`document.body.textContent.includes('BACKEND DATA')`)
   await command('Emulation.setDeviceMetricsOverride', { width: 360, height: 900, deviceScaleFactor: 1, mobile: true }, session)
   await pause(400)
