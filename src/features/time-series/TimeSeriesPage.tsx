@@ -2,60 +2,27 @@ import { useEffect, useMemo, useState } from 'react'
 import type { EChartsOption } from 'echarts'
 import { Activity, BarChart3, CalendarDays, ChartScatter, RefreshCw, Waves } from 'lucide-react'
 import EChart from '../../components/charts/EChart'
-import { loadTimeSeries, type WaveObservation } from './data'
+import { loadTimeSeries, type Metric, type SummaryRow, type TimeSeriesOverview } from './data'
 
-type Metric = 'WVHT' | 'DPD' | 'APD' | 'MWD' | 'WTMP'
 type Aggregation = 'mean' | 'median'
-const fields: Record<Metric, { field: keyof WaveObservation; unit: string; title: string }> = {
-  WVHT: { field: 'wave_height_m', unit: 'm', title: 'Wave Height' },
-  DPD: { field: 'dominant_period_s', unit: 's', title: 'Dominant Period' },
-  APD: { field: 'average_period_s', unit: 's', title: 'Average Period' },
-  MWD: { field: 'wave_direction_deg', unit: '°', title: 'Wave Direction' },
-  WTMP: { field: 'sea_temperature_c', unit: '°C', title: 'Sea Temperature' },
+const fields: Record<Metric, { unit: string; title: string }> = {
+  WVHT: { unit: 'm', title: 'Wave Height' },
+  DPD: { unit: 's', title: 'Dominant Period' },
+  APD: { unit: 's', title: 'Average Period' },
+  MWD: { unit: '°', title: 'Wave Direction' },
+  WTMP: { unit: '°C', title: 'Sea Temperature' },
 }
 function dateUTC(daysBack: number): string {
   const d = new Date()
   d.setUTCDate(d.getUTCDate() - daysBack)
   return d.toISOString().slice(0, 10)
 }
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b)
-  const middle = Math.floor(sorted.length / 2)
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
-}
-function getValue(row: WaveObservation, metric: Metric): number | null {
-  const value = row[fields[metric].field]
-  return typeof value === 'number' && Number.isFinite(value) ? value : null
-}
-function aggregate(rows: WaveObservation[], metric: Metric, period: 'day' | 'week' | 'month', method: Aggregation) {
-  const buckets = new Map<string, number[]>()
-  for (const row of rows) {
-    const n = getValue(row, metric)
-    if (n === null) continue
-    const day = new Date(row.observed_at)
-    if (!Number.isFinite(day.getTime())) continue
-    let label: string
-    if (period === 'month') {
-      label = day.toISOString().slice(0, 7)
-    } else if (period === 'week') {
-      // Tuần ISO bắt đầu thứ Hai, dùng ngày bắt đầu tuần làm nhãn.
-      const monday = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()))
-      monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7))
-      label = monday.toISOString().slice(0, 10)
-    } else {
-      label = day.toISOString().slice(0, 10)
-    }
-    if (!buckets.has(label)) buckets.set(label, [])
-    buckets.get(label)?.push(n)
-  }
-  return [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([label, values]) => ({
-    label,
-    value: Number((method === 'mean' ? values.reduce((a, b) => a + b, 0) / values.length : median(values)).toFixed(3)),
-    count: values.length,
-  }))
+function chartRows(rows: SummaryRow[], method: Aggregation) {
+  return rows.map(row => ({ label: row.period_start, value: method === 'mean' ? row.mean_value : row.median_value,
+    count: row.sample_count }))
 }
 function lineOptions(
-  rows: ReturnType<typeof aggregate>,
+  rows: ReturnType<typeof chartRows>,
   label: string,
   unit: string,
   metric: Metric,
@@ -103,40 +70,37 @@ export default function TimeSeriesPage() {
   const [quickRange, setQuickRange] = useState<number | null>(180)
   const [applied, setApplied] = useState(() => ({ from: dateUTC(180), to: dateUTC(0) }))
   const [refresh, setRefresh] = useState(0)
-  const [rows, setRows] = useState<WaveObservation[]>([])
+  const [overview, setOverview] = useState<TimeSeriesOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [truncated, setTruncated] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
     setLoading(true)
     setError(null)
-    loadTimeSeries(applied.from, applied.to, controller.signal)
+    setOverview(null)
+    loadTimeSeries(applied.from, applied.to, metric, qcOnly, controller.signal)
       .then(result => {
         if (controller.signal.aborted) return
-        setRows(result.items)
-        setTruncated(result.truncated)
+        setOverview(result)
       })
       .catch((reason: unknown) => {
         if (controller.signal.aborted) return
-        setRows([])
+        setOverview(null)
         setError(reason instanceof Error ? reason.message : String(reason))
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [applied, refresh])
+  }, [applied, metric, qcOnly, refresh])
 
-  const filtered = useMemo(() => qcOnly ? rows.filter(x => x.quality_flag.toLowerCase() === 'valid') : rows, [rows, qcOnly])
-  const daily = useMemo(() => aggregate(filtered, metric, 'day', aggregation), [filtered, metric, aggregation])
-  const weekly = useMemo(() => aggregate(filtered, metric, 'week', aggregation), [filtered, metric, aggregation])
-  const monthly = useMemo(() => aggregate(filtered, metric, 'month', aggregation), [filtered, metric, aggregation])
-  const heights = useMemo(() => filtered.map(x => x.wave_height_m).filter((x): x is number => typeof x === 'number' && Number.isFinite(x)), [filtered])
-  const pairs = useMemo(() => filtered.filter(x => typeof x.wave_height_m === 'number' && typeof x.dominant_period_s === 'number').map(x => [x.wave_height_m as number, x.dominant_period_s as number]), [filtered])
+  const daily = useMemo(() => chartRows(overview?.summary.day ?? [], aggregation), [overview, aggregation])
+  const weekly = useMemo(() => chartRows(overview?.summary.week ?? [], aggregation), [overview, aggregation])
+  const monthly = useMemo(() => chartRows(overview?.summary.month ?? [], aggregation), [overview, aggregation])
+  const pairs = useMemo(() => overview?.scatter.points.map(x => [x.wave_height_m, x.dominant_period_s]) ?? [], [overview])
 
   const histogram: EChartsOption = useMemo(() => {
     const edges = Array.from({ length: 12 }, (_, index) => index * 0.5)
-    const counts = edges.map((min, index) => heights.filter(v => v >= min && (index === 11 ? true : v < min + 0.5)).length)
+    const counts = edges.map((_, index) => overview?.histogram.find(bin => bin.bin === index)?.sample_count ?? 0)
     return {
       backgroundColor: 'transparent', tooltip: { trigger: 'axis' },
       grid: { left: 55, right: 18, top: 25, bottom: 45 },
@@ -144,7 +108,7 @@ export default function TimeSeriesPage() {
       yAxis: { type: 'value', name: 'Số mẫu', nameTextStyle: { color: '#9fbace' }, axisLabel: { color: '#9fbace' }, splitLine: { lineStyle: { color: '#244459' } } },
       series: [{ name: 'Observations', type: 'bar', data: counts, barMaxWidth: 34, itemStyle: { color: '#22d3ee', borderRadius: [4, 4, 0, 0] } }],
     }
-  }, [heights])
+  }, [overview])
 
   const scatter: EChartsOption = useMemo(() => ({
     backgroundColor: 'transparent', tooltip: { trigger: 'item', formatter: (p: unknown) => {
@@ -167,7 +131,7 @@ export default function TimeSeriesPage() {
     setRefresh(n => n + 1)
   }
   function selectQuickRange(days: number) {
-    const next = { from: dateUTC(days), to: dateUTC(0) }
+    const next = { from: days === 239 ? '2004-09-08' : dateUTC(days), to: dateUTC(0) }
     setFrom(next.from)
     setTo(next.to)
     setQuickRange(days)
@@ -188,12 +152,10 @@ export default function TimeSeriesPage() {
     setRefresh(n => n + 1)
   }
   const active = fields[metric]
-  const metricValues = filtered.map(x => getValue(x, metric)).filter((x): x is number => x !== null)
-  const average = metricValues.length ? metricValues.reduce((a, b) => a + b, 0) / metricValues.length : null
-  const observedData = !loading && !error && rows.length > 0
-  const metricSummary = metricValues.length ? (aggregation === 'mean' ? average : median(metricValues)) : null
+  const observedData = !loading && !error && overview !== null
+  const metricSummary = aggregation === 'mean' ? overview?.totals.mean_value : overview?.totals.median_value
   const miniStat = (label: string, value: string) => <div className="rounded-xl border border-[#294c63] bg-[#0a2133] p-4"><div className="text-xs text-slate-400">{label}</div><div className="mt-2 text-xl font-bold text-white">{value}</div></div>
-  const section = (title: string, description: string, data: ReturnType<typeof aggregate>, allowZoom = false) => (
+  const section = (title: string, description: string, data: ReturnType<typeof chartRows>, allowZoom = false) => (
     <section className={panel}>
       <div className="mb-4"><h2 className="text-base font-bold text-white">{title}</h2><p className="mt-1 text-xs text-slate-400">{description} · {aggregation.toUpperCase()} · {active.unit}</p></div>
       {data.length > 0 ? (
@@ -208,7 +170,7 @@ export default function TimeSeriesPage() {
       <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-400"><Waves size={17} /> S03 · NOAA Station 51201</div>
       <h1 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">Time-Series Analytics</h1>
       <p className="mt-2 text-sm leading-6 text-slate-400">Phân tích sóng biển theo ngày, tuần và tháng; phân bố độ cao sóng và mối quan hệ WVHT–DPD.</p>
-      <div className="mt-4 flex flex-wrap items-center gap-2"><span className="rounded-lg bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300">Station 51201 · UTC aggregation</span><span className={`rounded-lg px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-300`}>{loading ? 'LOADING' : error ? 'DATA UNAVAILABLE' : 'BACKEND DATA'}</span></div>
+      <div className="mt-4 flex flex-wrap items-center gap-2"><span className="rounded-lg bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300">Station 51201 · UTC aggregation</span><span className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">{loading ? 'LOADING' : error ? 'DATA UNAVAILABLE' : 'BACKEND DATA'}</span></div>
     </header>
 
     <section className={panel}>
@@ -225,7 +187,7 @@ export default function TimeSeriesPage() {
           <button key={days} type="button" onClick={() => selectQuickRange(days)}
             aria-pressed={quickRange === days}
             className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${quickRange === days ? 'border-cyan-500 bg-cyan-500/15 text-cyan-200' : 'border-[#31556b] text-slate-300 hover:bg-[#193b51]'}`}>
-            {days === 239 ? 'Toàn bộ demo' : `${days} ngày`}
+            {days === 239 ? 'Toàn bộ lịch sử' : `${days} ngày`}
           </button>
         ))}
       </div>
@@ -236,17 +198,15 @@ export default function TimeSeriesPage() {
         <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" className="accent-cyan-400" checked={qcOnly} onChange={e => setQcOnly(e.target.checked)} /> Chỉ QC valid</label>
         <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" className="accent-cyan-400" checked={showZoomSlider} onChange={e => setShowZoomSlider(e.target.checked)} /> Hiện thanh zoom Daily</label>
       </div>
-      <p className="mt-3 text-xs text-slate-400">Chỉ số, Mean/Median và QC cập nhật biểu đồ ngay; thay ngày thủ công rồi nhấn Áp dụng. Chọn khoảng nhanh để áp dụng ngay.</p>
+      <p className="mt-3 text-xs text-slate-400">Đổi chỉ số hoặc QC sẽ tải lại số liệu tổng hợp từ Backend; Mean/Median đổi biểu đồ ngay. Chọn khoảng nhanh để áp dụng ngay.</p>
     </section>
 
     {error && <div role="alert" className="rounded-xl border border-amber-600/40 bg-amber-500/10 p-4 text-sm text-amber-200">Không thể tải dữ liệu: {error}</div>}
-    {truncated && <div className="rounded-xl border border-amber-600/40 bg-amber-500/10 p-4 text-sm text-amber-200">Backend có nhiều hơn 10 trang dữ liệu. Biểu đồ chỉ dựa trên phần dữ liệu đã tải; cần API tổng hợp để hiển thị toàn bộ lịch sử.</div>}
-
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {miniStat('Bản ghi đã tải', observedData ? filtered.length.toLocaleString('vi-VN') : '—')}
-      {miniStat(`Giá trị ${metric} hợp lệ`, observedData ? metricValues.length.toLocaleString('vi-VN') : '—')}
-      {miniStat(`${metric} ${aggregation === 'mean' ? 'trung bình' : 'trung vị'}`, metricSummary === null || !observedData ? '—' : `${metricSummary.toFixed(2)} ${active.unit}`)}
-      {miniStat('Số ngày có dữ liệu', observedData ? `${new Set(filtered.map(x => x.observed_at.slice(0, 10))).size}` : '—')}
+      {miniStat('Bản ghi trong khoảng chọn', observedData ? overview.totals.observation_count.toLocaleString('vi-VN') : '—')}
+      {miniStat(`Giá trị ${metric} có dữ liệu`, observedData ? overview.totals.metric_count.toLocaleString('vi-VN') : '—')}
+      {miniStat(`${metric} ${aggregation === 'mean' ? 'trung bình' : 'trung vị'}`, metricSummary == null || !observedData ? '—' : `${metricSummary.toFixed(2)} ${active.unit}`)}
+      {miniStat('Số ngày có dữ liệu', observedData ? overview.totals.day_count.toLocaleString('vi-VN') : '—')}
     </div>
 
     <div className="grid gap-5 xl:grid-cols-2">
@@ -256,10 +216,10 @@ export default function TimeSeriesPage() {
     {section('Monthly Overview', 'Giá trị gộp theo từng tháng UTC', monthly)}
 
     <div className="grid gap-5 xl:grid-cols-2">
-      <section className={panel}><div className="mb-4 flex items-center gap-2"><BarChart3 className="text-cyan-400" size={18} /><h2 className="font-bold text-white">Wave Height Distribution</h2></div><p className="mb-4 text-xs text-slate-400">Histogram WVHT · bước 0,5 m · {heights.length} mẫu hợp lệ</p>{heights.length ? <EChart options={histogram} height={315} /> : <EmptyChart />}</section>
-      <section className={panel}><div className="mb-4 flex items-center gap-2"><ChartScatter className="text-cyan-400" size={18} /><h2 className="font-bold text-white">Wave Height vs Dominant Period</h2></div><p className="mb-4 text-xs text-slate-400">Scatter WVHT (m) và DPD (s) · {pairs.length} cặp hợp lệ</p>{pairs.length ? <EChart options={scatter} height={315} /> : <EmptyChart />}</section>
+      <section className={panel}><div className="mb-4 flex items-center gap-2"><BarChart3 className="text-cyan-400" size={18} /><h2 className="font-bold text-white">Wave Height Distribution</h2></div><p className="mb-4 text-xs text-slate-400">Histogram WVHT · bước 0,5 m · {overview?.histogram.reduce((sum, bin) => sum + bin.sample_count, 0).toLocaleString('vi-VN') ?? 0} mẫu trong toàn khoảng chọn</p>{overview?.histogram.length ? <EChart options={histogram} height={315} /> : <EmptyChart />}</section>
+      <section className={panel}><div className="mb-4 flex items-center gap-2"><ChartScatter className="text-cyan-400" size={18} /><h2 className="font-bold text-white">Wave Height vs Dominant Period</h2></div><p className="mb-4 text-xs text-slate-400">Scatter WVHT (m) và DPD (s) · hiển thị {pairs.length.toLocaleString('vi-VN')} điểm lấy đều từ {overview?.scatter.total_pairs.toLocaleString('vi-VN') ?? 0} cặp trong toàn khoảng chọn</p>{pairs.length ? <EChart options={scatter} height={315} /> : <EmptyChart />}</section>
     </div>
-    <p className="text-xs leading-5 text-slate-500">Các biểu đồ được tính từ dữ liệu quan trắc tải về trong khoảng ngày chọn. Với MWD (góc), trung bình và trung vị tuyến tính chỉ phục vụ minh họa; cần thống kê vòng tròn để phân tích hướng chính xác. Các giá trị null không được tính vào tổng hợp.</p>
+    <p className="text-xs leading-5 text-slate-500">Biểu đồ ngày, tuần, tháng và histogram được Backend tính từ toàn bộ Silver trong khoảng chọn; scatter lấy mẫu tối đa 1.500 điểm. Với MWD (góc), trung bình và trung vị tuyến tính chỉ phục vụ minh họa; cần thống kê vòng tròn để phân tích hướng chính xác. Các giá trị null không được tính vào tổng hợp.</p>
   </div>
 }
 
