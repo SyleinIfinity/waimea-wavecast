@@ -1,159 +1,595 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, CalendarClock, RefreshCw, Waves } from 'lucide-react';
-import type { EChartsOption } from 'echarts';
-import EChart from '../../components/charts/EChart';
-import { getForwardForecasts, getShadowForecasts } from '../../api/client';
-import type { ForecastHorizon, ForecastSource, IssuedForecast } from '../../api/types';
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  Calendar,
+  Clock,
+  Compass,
+  Filter,
+  Layers,
+  RefreshCw,
+  ShieldCheck,
+  TrendingUp,
+  Waves,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+} from 'lucide-react'
+import type { EChartsOption } from 'echarts'
+import EChart from '../../components/charts/EChart'
+import { getShadowForecasts } from '../../api/client'
+import type { ForecastHorizon, IssuedForecast } from '../../api/types'
 
-const HORIZONS: ForecastHorizon[] = ['30min', '1d', '7d', '30d'];
-const HORIZON_LABELS: Record<ForecastHorizon, string> = {
-  '30min': '30 phút', '1d': '1 ngày', '7d': '7 ngày', '30d': '30 ngày',
-};
-const SOURCE_LABELS: Record<ForecastSource, string> = {
-  forward: 'Forward · experimental', shadow: 'Calisthenics 1.5 · shadow',
-};
+const HORIZONS: ForecastHorizon[] = ['30min', '1d', '7d', '30d']
 
-function hstTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Không xác định';
+const HORIZON_TITLES: Record<ForecastHorizon, { title: string; subtitle: string; desc: string }> = {
+  '30min': {
+    title: 'Ngắn hạn (30 phút)',
+    subtitle: 'Dự báo tức thời điểm đo tiếp theo',
+    desc: 'Ước lượng độ cao sóng WVHT tại mốc chu kỳ phát hành kế tiếp của NOAA.',
+  },
+  '1d': {
+    title: 'Kỳ hạn 1 ngày',
+    subtitle: 'Trung vị ngày kế tiếp (HST)',
+    desc: 'Dự báo trung vị độ cao sóng của cả ngày lịch Hawaii tiếp theo.',
+  },
+  '7d': {
+    title: 'Kỳ hạn ngày thứ 7',
+    subtitle: 'Trung vị ngày thứ 7 trong tương lai',
+    desc: 'Dự báo độ cao sóng trung vị tại mốc ngày thứ 7 (không phải chuỗi từng ngày).',
+  },
+  '30d': {
+    title: 'Trung bình 30 ngày',
+    subtitle: 'Trung bình cả giai đoạn 30 ngày tới',
+    desc: 'Dự báo giá trị trung bình độ cao sóng tổng thể trong 30 ngày tiếp theo.',
+  },
+}
+
+function formatVN(iso: string): string {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
   return new Intl.DateTimeFormat('vi-VN', {
-    timeZone: 'Pacific/Honolulu', day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: false,
-  }).format(date);
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date) + ' (VN)'
 }
 
-function metres(value: number | null): string {
-  return value == null ? 'Chưa có' : `${value.toFixed(2)} m`;
+function formatHST(iso: string): string {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Pacific/Honolulu',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date) + ' (HST)'
 }
 
-function evaluationState(row: IssuedForecast): string {
-  if (row.actual_value != null && row.evaluated_at) return 'Đã đối chiếu';
-  return Date.parse(row.target_at) > Date.now() ? 'Chưa đến hạn' : 'Chưa có quan trắc đã đối chiếu';
+function metres(value: number | null | undefined): string {
+  if (value == null) return '—'
+  return `${value.toFixed(2)} m`
 }
 
-function ForecastCard({ row, horizon }: { row?: IssuedForecast; horizon: ForecastHorizon }) {
-  return <div className="rounded-xl border border-slate-700 bg-[#0f2538] p-4">
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-xs font-semibold text-slate-200">{HORIZON_LABELS[horizon]}</span>
-      <span className="rounded bg-slate-700/60 px-2 py-0.5 text-[10px] text-slate-300">{row?.quality_status ?? 'Chưa có dữ liệu'}</span>
+function DualTimeClock() {
+  const [time, setTime] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const vnTime = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(time)
+
+  const hstTime = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Pacific/Honolulu',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(time)
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
+      <div className="flex items-center gap-1.5 text-cyan-300">
+        <Clock size={14} className="text-cyan-400 shrink-0" />
+        <span className="text-slate-400 text-[11px]">Giờ Việt Nam (VN · UTC+7):</span>
+        <strong className="text-white">{vnTime}</strong>
+      </div>
+      <span className="text-slate-700 hidden sm:inline">|</span>
+      <div className="flex items-center gap-1.5 text-amber-300">
+        <Clock size={14} className="text-amber-400 shrink-0" />
+        <span className="text-slate-400 text-[11px]">Giờ Hawaii (HST · UTC-10):</span>
+        <strong className="text-white">{hstTime}</strong>
+      </div>
     </div>
-    {row ? <>
-      <div className="mt-3 text-2xl font-bold tabular-nums text-cyan-200">{metres(row.predicted_value)}</div>
-      <div className="mt-1 text-xs text-slate-400">{row.target_kind === 'instant_wvht' ? 'WVHT tại thời điểm mục tiêu' : 'Trung vị WVHT ngày mục tiêu'}</div>
-      <dl className="mt-4 space-y-1.5 text-xs text-slate-400">
-        <div className="flex justify-between gap-3"><dt>Phát hành (HST)</dt><dd className="text-right text-slate-200">{hstTime(row.issued_at)}</dd></div>
-        <div className="flex justify-between gap-3"><dt>Mục tiêu (HST)</dt><dd className="text-right text-slate-200">{hstTime(row.target_at)}</dd></div>
-        <div className="flex justify-between gap-3"><dt>Quan trắc</dt><dd className="text-right text-slate-200">{metres(row.actual_value)}</dd></div>
-        <div className="flex justify-between gap-3"><dt>Sai số tuyệt đối</dt><dd className="text-right text-slate-200">{metres(row.absolute_error)}</dd></div>
-      </dl>
-      <p className="mt-3 border-t border-slate-700 pt-2 text-[11px] text-slate-400">{evaluationState(row)} · Model {row.model_version}</p>
-    </> : <p className="mt-4 text-sm text-amber-200">API chưa có dự báo cho horizon này.</p>}
-  </div>;
+  )
+}
+
+function HorizonCard({
+  horizon,
+  forecast,
+}: {
+  horizon: ForecastHorizon
+  forecast?: IssuedForecast
+}) {
+  const meta = HORIZON_TITLES[horizon]
+
+  // Trạng thái đối chiếu
+  const isEvaluated = forecast?.actual_value != null && forecast?.evaluated_at
+  const stateLabel = isEvaluated ? 'Đã có kết quả' : 'Đang chờ dữ liệu thật'
+
+  // Thời gian hoặc giai đoạn mục tiêu
+  let targetDisplay = '—'
+  if (forecast) {
+    if (horizon === '30min') {
+      targetDisplay = `${formatVN(forecast.target_at)} / ${formatHST(forecast.target_at)}`
+    } else if (horizon === '1d') {
+      targetDisplay = forecast.target_date_hst ? `Ngày mục tiêu: ${forecast.target_date_hst} (HST)` : formatHST(forecast.target_at)
+    } else if (horizon === '7d') {
+      targetDisplay = forecast.target_date_hst ? `Ngày thứ 7: ${forecast.target_date_hst} (HST)` : formatHST(forecast.target_at)
+    } else if (horizon === '30d') {
+      targetDisplay = `Giai đoạn 30 ngày (tới ${forecast.target_date_hst || formatHST(forecast.target_at)})`
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-800 bg-[#0c121e] p-5 space-y-4 flex flex-col justify-between">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-mono font-bold uppercase text-sky-400">
+            {horizon}
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold ${
+              isEvaluated
+                ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+            }`}
+          >
+            {stateLabel}
+          </span>
+        </div>
+        <h3 className="text-base font-bold text-white">{meta.title}</h3>
+        <p className="text-xs text-slate-400">{meta.subtitle}</p>
+      </div>
+
+      {forecast ? (
+        <div className="space-y-3 pt-2 border-t border-slate-800/80">
+          <div>
+            <span className="text-[11px] text-slate-400 font-mono">Giá trị dự báo (WVHT):</span>
+            <div className="text-2xl font-bold text-sky-300 tabular-nums">
+              {metres(forecast.predicted_value)}
+            </div>
+          </div>
+
+          <div className="space-y-1.5 text-xs">
+            <div>
+              <span className="text-slate-400">Thời gian tạo dự báo:</span>
+              <p className="text-slate-200 font-mono text-[11px]">{formatVN(forecast.issued_at)}</p>
+            </div>
+
+            <div>
+              <span className="text-slate-400">Kỳ hạn / Ngày mục tiêu:</span>
+              <p className="text-slate-200 font-mono text-[11px]">{targetDisplay}</p>
+            </div>
+
+            {isEvaluated ? (
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60">
+                <div>
+                  <span className="text-slate-400">Giá trị thực tế:</span>
+                  <p className="text-emerald-400 font-bold font-mono">{metres(forecast.actual_value)}</p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Sai số tuyệt đối:</span>
+                  <p className="text-amber-300 font-bold font-mono">{metres(forecast.absolute_error)}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-2 text-[11px] text-slate-400 font-mono border-t border-slate-800/60">
+                <span>Dự kiến nhận kết quả:</span>
+                <p className="text-amber-300/90 font-sans mt-0.5">
+                  Sau khi NOAA công bố và dữ liệu qua kiểm định QC
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="py-6 text-center text-xs text-amber-300 font-mono border border-dashed border-slate-800 rounded-lg">
+          Chưa có dự báo cho kỳ hạn này
+        </div>
+      )}
+
+      <div className="pt-2 border-t border-slate-800/60 text-[11px] text-slate-500 font-mono flex items-center justify-between">
+        <span>Model: {forecast?.model_version || 'Calisthenics 1.5'}</span>
+        <span className="text-amber-400/80">Thử nghiệm</span>
+      </div>
+    </div>
+  )
 }
 
 export default function ForecastPage() {
-  const [forward, setForward] = useState<IssuedForecast[]>([]);
-  const [shadow, setShadow] = useState<IssuedForecast[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadedAt, setLoadedAt] = useState<string | null>(null);
-  const [sourceFilter, setSourceFilter] = useState<'all' | ForecastSource>('all');
-  const [horizonFilter, setHorizonFilter] = useState<'all' | ForecastHorizon>('all');
-  const [reload, setReload] = useState(0);
+  const [activeTab, setActiveTab] = useState<'forecast' | 'classification'>('forecast')
+  const [shadowForecasts, setShadowForecasts] = useState<Record<ForecastHorizon, IssuedForecast[]>>({
+    '30min': [],
+    '1d': [],
+    '7d': [],
+    '30d': [],
+  })
+  const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [historyHorizonFilter, setHistoryHorizonFilter] = useState<'all' | ForecastHorizon>('all')
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
+  const [historyPage, setHistoryPage] = useState(1)
+  const PAGE_SIZE = 15
 
-  const refresh = useCallback(() => setReload(value => value + 1), []);
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
+
   useEffect(() => {
-    const controller = new AbortController();
-    const load = async () => {
-      setRefreshing(true);
-      const results = await Promise.allSettled([
-        getForwardForecasts(controller.signal),
-        ...HORIZONS.map(horizon => getShadowForecasts(horizon, controller.signal)),
-      ]);
-      if (controller.signal.aborted) return;
-      const problems: string[] = [];
-      const first = results[0];
-      setForward(first.status === 'fulfilled' ? first.value : []);
-      if (first.status === 'rejected') problems.push(`Forward: ${String(first.reason instanceof Error ? first.reason.message : first.reason)}`);
-      const shadowRows: IssuedForecast[] = [];
-      results.slice(1).forEach((result, index) => {
-        if (result.status === 'fulfilled') shadowRows.push(...result.value);
-        else problems.push(`Shadow ${HORIZON_LABELS[HORIZONS[index]]}: ${String(result.reason instanceof Error ? result.reason.message : result.reason)}`);
-      });
-      setShadow(shadowRows);
-      setErrors(problems);
-      setLoadedAt(new Date().toISOString());
-      setLoading(false);
-      setRefreshing(false);
-    };
-    void load();
-    const timer = window.setInterval(() => void load(), 60_000);
-    return () => { controller.abort(); window.clearInterval(timer); };
-  }, [reload]);
+    const controller = new AbortController()
+    setLoading(true)
 
-  const allRows = useMemo(() => [...forward, ...shadow].sort((a, b) => Date.parse(b.issued_at) - Date.parse(a.issued_at)), [forward, shadow]);
-  const selectedRows = useMemo(() => allRows.filter(row =>
-    (sourceFilter === 'all' || row.source === sourceFilter) &&
-    (horizonFilter === 'all' || row.horizon === horizonFilter),
-  ).slice(0, 30), [allRows, sourceFilter, horizonFilter]);
-  const chartRows = useMemo(() => selectedRows.slice(0, 20).reverse(), [selectedRows]);
-  const chartOptions: EChartsOption = {
-    tooltip: { trigger: 'axis', backgroundColor: '#0f2538', borderColor: '#334155', textStyle: { color: '#e2e8f0' } },
-    legend: { data: ['Dự báo', 'Quan trắc'], textStyle: { color: '#cbd5e1' } },
-    grid: { left: 55, right: 18, top: 50, bottom: 65 },
-    xAxis: { type: 'category', data: chartRows.map(row => hstTime(row.target_at)), axisLabel: { color: '#94a3b8', rotate: 30 } },
-    yAxis: { type: 'value', name: 'WVHT (m)', axisLabel: { color: '#94a3b8' } },
-    series: [
-      { name: 'Dự báo', type: 'line', data: chartRows.map(row => row.predicted_value), connectNulls: false, itemStyle: { color: '#22d3ee' } },
-      { name: 'Quan trắc', type: 'line', data: chartRows.map(row => row.actual_value), connectNulls: false, itemStyle: { color: '#fbbf24' } },
-    ],
-  };
+    Promise.allSettled([
+      getShadowForecasts('30min', controller.signal),
+      getShadowForecasts('1d', controller.signal),
+      getShadowForecasts('7d', controller.signal),
+      getShadowForecasts('30d', controller.signal),
+    ])
+      .then(([r30m, r1d, r7d, r30d]) => {
+        if (controller.signal.aborted) return
+        setShadowForecasts({
+          '30min': r30m.status === 'fulfilled' ? r30m.value : [],
+          '1d': r1d.status === 'fulfilled' ? r1d.value : [],
+          '7d': r7d.status === 'fulfilled' ? r7d.value : [],
+          '30d': r30d.status === 'fulfilled' ? r30d.value : [],
+        })
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
 
-  return <div className="space-y-6 text-slate-100">
-    <header className="rounded-xl border border-[#28516a] bg-[#102d43] p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    return () => controller.abort()
+  }, [refreshKey])
+
+  // Lấy dự báo mới nhất cho 4 cards
+  const latestByHorizon = useMemo(() => {
+    const map: Partial<Record<ForecastHorizon, IssuedForecast>> = {}
+    HORIZONS.forEach((h) => {
+      const list = shadowForecasts[h]
+      if (list && list.length > 0) {
+        map[h] = list[0]
+      }
+    })
+    return map
+  }, [shadowForecasts])
+
+  // Lịch sử toàn bộ dự báo
+  const allHistoryRows = useMemo(() => {
+    const merged: IssuedForecast[] = []
+    HORIZONS.forEach((h) => {
+      merged.push(...shadowForecasts[h])
+    })
+    return merged.sort((a, b) => {
+      const tA = Date.parse(a.issued_at)
+      const tB = Date.parse(b.issued_at)
+      return sortOrder === 'desc' ? tB - tA : tA - tB
+    })
+  }, [shadowForecasts, sortOrder])
+
+  // Lọc lịch sử
+  const filteredHistory = useMemo(() => {
+    if (historyHorizonFilter === 'all') return allHistoryRows
+    return allHistoryRows.filter((r) => r.horizon === historyHorizonFilter)
+  }, [allHistoryRows, historyHorizonFilter])
+
+  // Phân trang lịch sử
+  const paginatedHistory = useMemo(() => {
+    const start = (historyPage - 1) * PAGE_SIZE
+    return filteredHistory.slice(start, start + PAGE_SIZE)
+  }, [filteredHistory, historyPage])
+
+  const totalPages = Math.ceil(filteredHistory.length / PAGE_SIZE) || 1
+
+  return (
+    <main className="w-full min-w-0 px-4 py-6 text-slate-100 sm:px-6 lg:px-8 space-y-6">
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-300"><Waves size={16} /> S07 · NOAA 51201</div>
-          <h1 className="mt-2 text-2xl font-bold">Dự báo sóng đang phát hành</h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-300">Kết quả forward experimental và Calisthenics 1.5 shadow từ Backend. Đây là dữ liệu thử nghiệm; trạng thái đối chiếu chỉ xuất hiện khi đã có quan trắc được đánh giá.</p>
+          <div className="flex items-center gap-2 text-xs font-mono text-sky-400 uppercase tracking-wider mb-1">
+            <TrendingUp size={15} />
+            <span>Mô hình Calisthenics 1.5 · Thử nghiệm &amp; Theo dõi ngầm</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Dự đoán và phân loại</h1>
+          <p className="mt-1 text-xs text-slate-400 max-w-2xl">
+            Kết quả dự báo độ cao sóng thử nghiệm theo các kỳ hạn 30 phút, 1 ngày, 7 ngày và 30 ngày từ mô hình Calisthenics 1.5.
+          </p>
         </div>
-        <button type="button" onClick={refresh} disabled={refreshing} className="flex items-center gap-2 rounded-lg border border-cyan-500/40 px-3 py-2 text-sm text-cyan-200 disabled:opacity-50"><RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Làm mới</button>
-      </div>
-      <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-400">
-        <span className="flex items-center gap-1"><Activity size={14} /> {allRows.length} bản ghi đã tải</span>
-        <span className="flex items-center gap-1"><CalendarClock size={14} /> {loadedAt ? `Tải lúc ${hstTime(loadedAt)} HST` : 'Chưa tải'}</span>
-        <span>Tự cập nhật mỗi 60 giây</span>
-      </div>
-    </header>
 
-    {errors.map(error => <div key={error} role="alert" className="rounded-lg border border-rose-800/40 bg-rose-950/20 p-4 text-sm text-rose-200">{error}</div>)}
-    {loading ? <div role="status" className="py-10 text-center text-slate-400">Đang tải dự báo từ Backend...</div> : <>
-      {allRows.length === 0 && <div role="alert" className="rounded-lg border border-amber-700/40 bg-amber-950/20 p-4 text-sm text-amber-200">Backend chưa trả dự báo cho các luồng đang hiển thị.</div>}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-200">Forward · experimental</h2>
-        <div className="grid gap-3 md:grid-cols-3">{HORIZONS.filter(h => h !== '30d').map(horizon => <ForecastCard key={horizon} horizon={horizon} row={forward.find(row => row.horizon === horizon)} />)}</div>
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-200">Calisthenics 1.5 · shadow</h2>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{HORIZONS.map(horizon => <ForecastCard key={horizon} horizon={horizon} row={shadow.find(row => row.horizon === horizon)} />)}</div>
-      </section>
-      <section className="rounded-xl border border-slate-700 bg-[#0f2538] p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Lịch sử dự báo đã tải</h2>
-          <div className="flex gap-2">
-            <select aria-label="Nguồn dự báo" value={sourceFilter} onChange={event => setSourceFilter(event.target.value as typeof sourceFilter)} className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs"><option value="all">Mọi nguồn</option><option value="forward">Forward</option><option value="shadow">Shadow</option></select>
-            <select aria-label="Horizon" value={horizonFilter} onChange={event => setHorizonFilter(event.target.value as typeof horizonFilter)} className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs"><option value="all">Mọi horizon</option>{HORIZONS.map(horizon => <option key={horizon} value={horizon}>{HORIZON_LABELS[horizon]}</option>)}</select>
+        <div className="flex items-center gap-3">
+          {/* TAB SWITCHER */}
+          <div className="inline-flex rounded-lg bg-slate-900 p-1 border border-slate-800 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('forecast')}
+              className={`px-3 py-1.5 rounded-md font-medium transition ${
+                activeTab === 'forecast'
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Dự đoán sóng
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('classification')}
+              className={`px-3 py-1.5 rounded-md font-medium transition ${
+                activeTab === 'classification'
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Phân loại cấp sóng
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin text-sky-400' : ''} />
+            <span>Làm mới</span>
+          </button>
+        </div>
+      </div>
+
+      {/* TOP STRIP: REALTIME DUAL CLOCKS (VN & HAWAII) & NOTICE */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-800 bg-[#0c121e]">
+        <DualTimeClock />
+
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+            Trạng thái: Thử nghiệm / Đang theo dõi (DRAFT)
+          </span>
+          <span className="text-[11px] text-slate-400 font-mono">Nguồn: Calisthenics 1.5 Shadow</span>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 1: DỰ ĐOÁN */}
+      {/* ========================================================================= */}
+      {activeTab === 'forecast' && (
+        <div className="space-y-6">
+          {/* CHÚ GIẢI THUẬT NGỮ */}
+          <div className="p-3.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-300 flex items-start gap-2.5">
+            <Info size={16} className="text-sky-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p>
+                <strong>Chú giải thuật ngữ:</strong> <strong>WVHT</strong> (Significant Wave Height) là độ cao sóng có ý nghĩa (đơn vị mét - m).
+              </p>
+              <p className="text-slate-400 text-[11px]">
+                Mốc 7 ngày là dự báo giá trị trung vị của riêng ngày thứ 7; mốc 30 ngày là giá trị trung bình của cả giai đoạn 30 ngày tiếp theo.
+                Dự báo được tạo tự động và đối chiếu độc lập với dữ liệu trạm NOAA 51201 khi có kết quả quan trắc thực tế.
+              </p>
+            </div>
+          </div>
+
+          {/* 4 CARDS THEO 4 KỲ HẠN */}
+          <div>
+            <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <Waves size={16} className="text-sky-400" />
+              <span>Dự báo sóng theo 4 kỳ hạn</span>
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {HORIZONS.map((h) => (
+                <HorizonCard key={h} horizon={h} forecast={latestByHorizon[h]} />
+              ))}
+            </div>
+          </div>
+
+          {/* BẢNG LỊCH SỬ DỰ BÁO */}
+          <div className="rounded-xl border border-slate-800 bg-[#0c121e] p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Activity size={18} className="text-sky-400" />
+                  <span>Lịch sử phát hành &amp; Đối chiếu dự báo</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Theo dõi sai số thực tế giữa giá trị mô hình Calisthenics 1.5 dự đoán và quan trắc phao NOAA 51201
+                </p>
+              </div>
+
+              {/* FILTERS */}
+              <div className="flex flex-wrap items-center gap-2.5 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400 font-medium">Lọc kỳ hạn:</span>
+                  <select
+                    value={historyHorizonFilter}
+                    onChange={(e) => {
+                      setHistoryHorizonFilter(e.target.value as any)
+                      setHistoryPage(1)
+                    }}
+                    className="rounded-lg bg-slate-900 border border-slate-700 px-2.5 py-1 text-slate-200 font-mono text-xs focus:border-sky-500 focus:outline-none"
+                  >
+                    <option value="all">Tất cả kỳ hạn</option>
+                    <option value="30min">30 phút</option>
+                    <option value="1d">1 ngày</option>
+                    <option value="7d">7 ngày</option>
+                    <option value="30d">30 ngày</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400 font-medium">Sắp xếp:</span>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as any)}
+                    className="rounded-lg bg-slate-900 border border-slate-700 px-2.5 py-1 text-slate-200 font-mono text-xs focus:border-sky-500 focus:outline-none"
+                  >
+                    <option value="desc">Mới nhất trước</option>
+                    <option value="asc">Cũ nhất trước</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* TABLE */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 text-[11px] uppercase tracking-wider">
+                    <th className="py-2.5 px-3">Mô hình</th>
+                    <th className="py-2.5 px-3">Kỳ hạn</th>
+                    <th className="py-2.5 px-3">Thời gian tạo (VN)</th>
+                    <th className="py-2.5 px-3">Mục tiêu (VN / HST)</th>
+                    <th className="py-2.5 px-3">Giá trị dự báo</th>
+                    <th className="py-2.5 px-3">Thời gian đối chiếu</th>
+                    <th className="py-2.5 px-3">Giá trị thực tế</th>
+                    <th className="py-2.5 px-3">Sai số tuyệt đối</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-sans">
+                  {paginatedHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-xs text-slate-500 font-mono">
+                        Không có bản ghi dự báo nào thỏa điều kiện lọc.
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedHistory.map((row) => {
+                      const isEvaluated = row.actual_value != null && row.evaluated_at
+                      return (
+                        <tr key={row.forecast_id} className="hover:bg-slate-900/50 transition">
+                          <td className="py-2.5 px-3 font-mono text-slate-300 text-xs">
+                            {row.model_version}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-sky-400">
+                            {row.horizon}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-400 text-[11px] whitespace-nowrap">
+                            {formatVN(row.issued_at)}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-300 text-[11px] whitespace-nowrap">
+                            {row.target_date_hst
+                              ? `${row.target_date_hst} (HST)`
+                              : formatVN(row.target_at)}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-sky-300">
+                            {metres(row.predicted_value)}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-400 text-[11px] whitespace-nowrap">
+                            {row.evaluated_at ? formatVN(row.evaluated_at) : <span className="text-slate-600">Chưa đối chiếu</span>}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-bold">
+                            {isEvaluated ? (
+                              <span className="text-emerald-400">{metres(row.actual_value)}</span>
+                            ) : (
+                              <span className="text-slate-600 font-normal">Chờ quan trắc</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono font-bold">
+                            {row.absolute_error != null ? (
+                              <span className="text-amber-300">{metres(row.absolute_error)}</span>
+                            ) : (
+                              <span className="text-slate-600 font-normal">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* PAGINATION FOOTER */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs text-slate-400">
+              <span className="font-mono">
+                Tổng cộng {filteredHistory.length} bản ghi dự báo Calisthenics 1.5
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={historyPage <= 1}
+                  onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded bg-slate-800 border border-slate-700 disabled:opacity-40 hover:bg-slate-700 text-slate-200 transition"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <span className="font-mono px-2">
+                  Trang {historyPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={historyPage >= totalPages}
+                  onClick={() => setHistoryPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1 rounded bg-slate-800 border border-slate-700 disabled:opacity-40 hover:bg-slate-700 text-slate-200 transition"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-        {selectedRows.length === 0 ? <p className="mt-4 text-sm text-amber-200">Không có dự báo từ Backend cho bộ lọc này.</p> : <>
-          {sourceFilter !== 'all' && horizonFilter !== 'all' && <div className="mt-5"><EChart options={chartOptions} height={280} /></div>}
-          <div className="mt-5 overflow-x-auto"><table className="min-w-full text-left text-xs">
-            <thead className="border-b border-slate-700 text-slate-400"><tr><th className="p-2">Nguồn / horizon</th><th className="p-2">Phát hành (HST)</th><th className="p-2">Mục tiêu (HST)</th><th className="p-2">Dự báo</th><th className="p-2">Quan trắc</th><th className="p-2">Sai số</th><th className="p-2">Trạng thái</th></tr></thead>
-            <tbody>{selectedRows.map(row => <tr key={`${row.source}-${row.forecast_id}`} className="border-b border-slate-800 text-slate-200"><td className="p-2"><div>{SOURCE_LABELS[row.source]}</div><div className="text-slate-400">{HORIZON_LABELS[row.horizon]} · {row.model_version}</div></td><td className="p-2 whitespace-nowrap">{hstTime(row.issued_at)}</td><td className="p-2 whitespace-nowrap">{hstTime(row.target_at)}</td><td className="p-2 tabular-nums">{metres(row.predicted_value)}</td><td className="p-2 tabular-nums">{metres(row.actual_value)}</td><td className="p-2 tabular-nums">{metres(row.absolute_error)}</td><td className="p-2">{evaluationState(row)}</td></tr>)}</tbody>
-          </table></div>
-        </>}
-      </section>
-    </>}
-  </div>;
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: PHÂN LOẠI */}
+      {/* ========================================================================= */}
+      {activeTab === 'classification' && (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 space-y-4 text-center max-w-2xl mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center mx-auto">
+              <AlertCircle size={24} />
+            </div>
+
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-white">Chưa có kết quả phân loại được kiểm chứng</h2>
+              <p className="text-xs text-amber-200/90 leading-relaxed max-w-lg mx-auto">
+                Hiện tại Backend chưa cấp quyền phát hành kết quả phân loại cấp sóng biển (Classification Scheme)
+                do các mô hình phân loại (RandomForestClassifier) đang trong quá trình hiệu chuẩn ngưỡng xác suất và kiểm định trên tập dữ liệu độc lập.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-black/40 border border-amber-500/20 text-left text-xs text-slate-300 space-y-2">
+              <div className="flex items-center gap-2 text-amber-400 font-semibold">
+                <ShieldCheck size={16} />
+                <span>Quy tắc an toàn hải văn đồ án</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Hệ thống tuân thủ nguyên tắc không tự ý quy đổi hay suy diễn mức độ an toàn khi bơi lội, lướt sóng hoặc ra khơi
+                chỉ dựa trên một thông số đơn lẻ như độ cao sóng WVHT mà không có mô hình phân loại được kiểm định chính thức.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  )
 }

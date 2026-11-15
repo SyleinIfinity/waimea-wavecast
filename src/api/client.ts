@@ -13,7 +13,10 @@ import type {
   PreviewDeleteResponse,
   DeletePatternsResponse,
 } from './types';
-const configuredBase = String(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+const configuredBase = String(import.meta.env.VITE_API_BASE_URL || '')
+  .trim()
+  .replace(/^['"]|['"]$/g, '')
+  .replace(/\/+$/, '');
 const BASE_URL = configuredBase.endsWith('/api/v1') ? configuredBase : `${configuredBase}/api/v1`;
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -158,6 +161,32 @@ export async function getPipelineStatus(): Promise<{ services: PipelineServiceSt
 export async function getDemoPreflight(): Promise<DemoPreflight> {
   return api<DemoPreflight>('/admin/demo/preflight');
 }
+
+export type StationData = {
+  station_id: string;
+  station_name?: string;
+  location_name?: string;
+  latitude: number;
+  longitude: number;
+  timezone?: string;
+  source_kind?: string;
+};
+
+export async function getStationInfo(signal?: AbortSignal): Promise<StationData> {
+  const result = await api<Envelope<StationData>>('/stations/51201', { signal });
+  return required(result, 'thông tin trạm');
+}
+
+export async function checkBackendHealth(): Promise<{ status: string }> {
+  try {
+    const res = await fetch(`${BASE_URL.replace(/\/api\/v1$/, '')}/health/ready`);
+    if (res.ok) return await res.json();
+    return { status: 'ok' };
+  } catch {
+    return { status: 'offline' };
+  }
+}
+
 export async function previewDeletePatterns(request: PreviewDeleteRequest): Promise<PreviewDeleteResponse> {
   return api<PreviewDeleteResponse>('/admin/demo/patterns/preview-delete', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request),

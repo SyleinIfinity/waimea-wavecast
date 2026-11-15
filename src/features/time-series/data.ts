@@ -25,7 +25,11 @@ export type TimeSeriesOverview = {
   }
 }
 
-const baseURL = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+const rawBase = String(import.meta.env.VITE_API_BASE_URL || '')
+  .trim()
+  .replace(/^['"]|['"]$/g, '')
+  .replace(/\/+$/, '')
+const baseURL = rawBase.endsWith('/api/v1') ? rawBase : `${rawBase}/api/v1`
 
 export async function loadTimeSeries(startDate: string, endDate: string, metric: Metric,
   qcOnly: boolean, signal?: AbortSignal): Promise<TimeSeriesOverview> {
