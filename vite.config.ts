@@ -10,10 +10,10 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/v1': {
-        target: 'http://136.85.0.193',
+        target: 'https://apiwaimea.liems.io.vn',
         changeOrigin: true,
+        secure: true,
       },
     },
   },
 })
-

@@ -19,7 +19,10 @@ const FIELDS: Record<Metric, string> = {
   WVHT: 'wave_height_m', DPD: 'dominant_period_s', APD: 'average_period_s',
   WSPD: 'wind_speed_ms', WTMP: 'sea_surface_temp_c',
 };
-const rawBase = String(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+const rawBase = String(import.meta.env.VITE_API_BASE_URL || '')
+  .trim()
+  .replace(/^['"]|['"]$/g, '')
+  .replace(/\/+$/, '');
 const base = rawBase.endsWith('/api/v1') ? rawBase : `${rawBase}/api/v1`;
 const PAGE_LIMIT = 1000;
 const MAX_PAGES = 5;
