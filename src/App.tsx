@@ -83,6 +83,7 @@ export default function App() {
   }, []);
 
   const vnClock = formatLiveClock(now, 'Asia/Ho_Chi_Minh');
+  const utcClock = formatLiveClock(now, 'UTC');
   const hstClock = formatLiveClock(now, 'Pacific/Honolulu');
 
   // 8 required pages in exact order
@@ -266,7 +267,7 @@ export default function App() {
       {/* ================= MAIN AREA ================= */}
       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         {/* TOP SYSTEM BAR */}
-        <header className="min-h-12 flex-none border-b border-slate-800 bg-[#0c111a] px-4 md:px-6 flex items-center justify-between gap-3 text-xs z-10">
+        <header className="min-h-12 flex-none border-b border-slate-800 bg-[#0c111a] px-4 py-2 md:px-6 flex flex-wrap items-center justify-between gap-3 text-xs z-10">
           <button
             type="button"
             aria-label="Mở menu điều hướng"
@@ -287,9 +288,9 @@ export default function App() {
             <span className="truncate text-slate-100 font-medium">{currentItem.label}</span>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3.5 text-xs font-mono ml-auto">
-            {/* ĐỒNG HỒ THỜI GIAN THỰC: VIỆT NAM & HAWAII */}
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 sm:gap-3.5 text-xs font-mono ml-auto">
+            {/* Ba đồng hồ dùng cùng một thời điểm, hiển thị theo từng múi giờ. */}
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {/* Giờ Việt Nam (UTC+7) */}
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#090d14] border border-cyan-800/50 text-[11px]">
                 <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
@@ -297,6 +298,16 @@ export default function App() {
                   <span className="text-cyan-300 font-semibold text-[10px]">VN (UTC+7):</span>
                   <span className="text-white font-bold tabular-nums">{vnClock.time}</span>
                   <span className="text-slate-400 text-[10px] hidden sm:inline">{vnClock.date}</span>
+                </div>
+              </div>
+
+              {/* Giờ quốc tế dùng trong bảng quan trắc NOAA */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#090d14] border border-sky-800/50 text-[11px]">
+                <Clock className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <div className="flex items-center gap-1.5 leading-tight">
+                  <span className="text-sky-300 font-semibold text-[10px]">UTC:</span>
+                  <span className="text-white font-bold tabular-nums">{utcClock.time}</span>
+                  <span className="text-slate-400 text-[10px] hidden sm:inline">{utcClock.date}</span>
                 </div>
               </div>
 

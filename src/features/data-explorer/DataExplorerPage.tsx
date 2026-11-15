@@ -96,7 +96,14 @@ export default function DataExplorerPage({
   const [tableData, setTableData] = useState<Observation[]>([])
   const [tableLoading, setTableLoading] = useState(false)
   const [tableError, setTableError] = useState<string | null>(null)
+  const [tableRefreshKey, setTableRefreshKey] = useState(0)
   const [selectedRawLine, setSelectedRawLine] = useState<{ time: string; line: string; source: string } | null>(null)
+
+  useEffect(() => {
+    if (activeTab !== 'layers' || tablePage !== 1) return
+    const interval = window.setInterval(() => setTableRefreshKey((key) => key + 1), 60_000)
+    return () => window.clearInterval(interval)
+  }, [activeTab, tablePage])
 
   // Fetch data for Tab 1 (Biểu đồ)
   useEffect(() => {
@@ -166,7 +173,7 @@ export default function DataExplorerPage({
       })
 
     return () => controller.abort()
-  }, [tableStart, tableEnd, tableCursor, selectedLayer, activeTab])
+  }, [tableStart, tableEnd, tableCursor, selectedLayer, activeTab, tableRefreshKey])
 
   // Chart statistics
   const chartStats = useMemo(() => {
