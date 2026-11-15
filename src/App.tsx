@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
-import DashboardPage from './features/dashboard/DashboardPage';
-import DataExplorerPage from './features/data-explorer/DataExplorerPage';
-import ForecastPage from './features/forecast/ForecastPage';
-import CorrelationPage from './features/analysis/CorrelationPage';
-import ClusteringPage from './features/clustering/ClusteringPage';
-import ModelsPage from './features/models/ModelsPage';
-import DataQualityPage from './features/data-quality/DataQualityPage';
-import DemoControlPage from './features/demo-control/DemoControlPage';
+import { useState, useEffect, lazy, Suspense } from 'react';
+
+const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage'));
+const DataExplorerPage = lazy(() => import('./features/data-explorer/DataExplorerPage'));
+const ForecastPage = lazy(() => import('./features/forecast/ForecastPage'));
+const CorrelationPage = lazy(() => import('./features/analysis/CorrelationPage'));
+const ClusteringPage = lazy(() => import('./features/clustering/ClusteringPage'));
+const ModelsPage = lazy(() => import('./features/models/ModelsPage'));
+const DataQualityPage = lazy(() => import('./features/data-quality/DataQualityPage'));
+const DemoControlPage = lazy(() => import('./features/demo-control/DemoControlPage'));
 
 import {
   Waves,
@@ -341,6 +342,7 @@ export default function App() {
         {/* MAIN VIEWPORT */}
         <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto pb-16">
+            <Suspense fallback={<div className="rounded-xl border border-slate-800 bg-[#0c121e] p-6 text-sm text-slate-300" role="status">Đang tải giao diện…</div>}>
             {/* 1. TỔNG QUAN */}
             {(activeTab === 'overview' || activeTab === 'dashboard') && <DashboardPage />}
 
@@ -371,6 +373,7 @@ export default function App() {
             {(activeTab === 'admin' || activeTab === 'demo' || activeTab === 'pipeline') && (
               <DemoControlPage />
             )}
+            </Suspense>
           </div>
         </main>
       </div>

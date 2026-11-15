@@ -61,19 +61,34 @@ function formatVN(iso: string): string {
   }).format(date) + ' (VN)'
 }
 
-function formatHST(iso: string): string {
-  if (!iso) return '—'
+function ThreeZoneTime({ iso }: { iso: string }) {
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat('vi-VN', {
-    timeZone: 'Pacific/Honolulu',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date) + ' (HST)'
+  const zones = [
+    { label: 'VN', timeZone: 'Asia/Ho_Chi_Minh' },
+    { label: 'UTC', timeZone: 'UTC' },
+    { label: 'Hawaii', timeZone: 'Pacific/Honolulu' },
+  ]
+
+  return (
+    <div className="mt-2 space-y-1.5 font-mono text-[11px] tabular-nums">
+      {zones.map(({ label, timeZone }) => (
+        <div key={label} className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-baseline gap-2">
+          <span className="text-slate-500">{label}</span>
+          <span className="font-semibold text-slate-100">
+            {Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('vi-VN', {
+              timeZone,
+              hour: '2-digit',
+              minute: '2-digit',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour12: false,
+            }).format(date)}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function metres(value: number | null | undefined): string {
@@ -140,19 +155,11 @@ function HorizonCard({
   const isEvaluated = forecast?.actual_value != null && forecast?.evaluated_at
   const stateLabel = isEvaluated ? 'Đã có kết quả' : 'Đang chờ dữ liệu thật'
 
-  // Thời gian hoặc giai đoạn mục tiêu
-  let targetDisplay = '—'
-  if (forecast) {
-    if (horizon === '30min') {
-      targetDisplay = `${formatVN(forecast.target_at)} / ${formatHST(forecast.target_at)}`
-    } else if (horizon === '1d') {
-      targetDisplay = forecast.target_date_hst ? `Ngày mục tiêu: ${forecast.target_date_hst} (HST)` : formatHST(forecast.target_at)
-    } else if (horizon === '7d') {
-      targetDisplay = forecast.target_date_hst ? `Ngày thứ 7: ${forecast.target_date_hst} (HST)` : formatHST(forecast.target_at)
-    } else if (horizon === '30d') {
-      targetDisplay = `Giai đoạn 30 ngày (tới ${forecast.target_date_hst || formatHST(forecast.target_at)})`
-    }
-  }
+  const targetDescription = horizon === '30min'
+    ? 'Mốc quan trắc tiếp theo'
+    : horizon === '30d'
+      ? `Kết thúc giai đoạn 30 ngày, ngày ${forecast?.target_date_hst || '—'} (Hawaii)`
+      : `Kết thúc ngày mục tiêu ${forecast?.target_date_hst || '—'} (Hawaii)`
 
   return (
     <div className="rounded-xl border border-slate-800 bg-[#0c121e] p-5 space-y-4 flex flex-col justify-between">
@@ -184,15 +191,16 @@ function HorizonCard({
             </div>
           </div>
 
-          <div className="space-y-1.5 text-xs">
-            <div>
-              <span className="text-slate-400">Thời gian tạo dự báo:</span>
-              <p className="text-slate-200 font-mono text-[11px]">{formatVN(forecast.issued_at)}</p>
+          <div className="space-y-3 text-xs">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+              <span className="font-semibold text-slate-300">Thời gian tạo dự đoán</span>
+              <ThreeZoneTime iso={forecast.issued_at} />
             </div>
 
-            <div>
-              <span className="text-slate-400">Kỳ hạn / Ngày mục tiêu:</span>
-              <p className="text-slate-200 font-mono text-[11px]">{targetDisplay}</p>
+            <div className="rounded-lg border border-sky-900/60 bg-sky-950/20 p-3">
+              <span className="font-semibold text-sky-300">Mục tiêu dự đoán</span>
+              <p className="mt-0.5 text-[11px] text-slate-400">{targetDescription}</p>
+              <ThreeZoneTime iso={forecast.target_at} />
             </div>
 
             {isEvaluated ? (
@@ -222,9 +230,9 @@ function HorizonCard({
         </div>
       )}
 
-      <div className="pt-2 border-t border-slate-800/60 text-[11px] text-slate-500 font-mono flex items-center justify-between">
-        <span>Model: {forecast?.model_version || 'Calisthenics 1.5'}</span>
-        <span className="text-amber-400/80">Thử nghiệm</span>
+      <div className="pt-2 border-t border-slate-800/60 text-[11px] text-slate-500 font-mono flex items-start justify-between gap-2">
+        <span className="min-w-0 break-all">Model: {forecast?.model_version || 'Calisthenics 1.5'}</span>
+        <span className="shrink-0 text-amber-400/80">Thử nghiệm</span>
       </div>
     </div>
   )
@@ -409,7 +417,7 @@ export default function ForecastPage() {
               <span>Dự báo sóng theo 4 kỳ hạn</span>
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4">
               {HORIZONS.map((h) => (
                 <HorizonCard key={h} horizon={h} forecast={latestByHorizon[h]} />
               ))}
