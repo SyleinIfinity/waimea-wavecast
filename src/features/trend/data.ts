@@ -15,7 +15,10 @@ export type TrendResult = {
 
 export type TrendFilters = { metric: string; from: string; to: string }
 
-const rawBase = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+const rawBase = String(import.meta.env.VITE_API_BASE_URL || '')
+  .trim()
+  .replace(/^['"]|['"]$/g, '')
+  .replace(/\/+$/, '')
 const base = rawBase.endsWith('/api/v1') ? rawBase : `${rawBase}/api/v1`
 function numberOrNull(v: unknown): number | null {
   if (v === null || v === undefined || v === '') return null

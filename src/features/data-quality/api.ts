@@ -1,6 +1,9 @@
 import { parseOverview, validateRange, type QualityOverview, type QualityRange } from './quality'
 
-const rawBase = String(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')
+const rawBase = String(import.meta.env.VITE_API_BASE_URL || '')
+  .trim()
+  .replace(/^['"]|['"]$/g, '')
+  .replace(/\/+$/, '')
 const base = rawBase.endsWith('/api/v1') ? rawBase : `${rawBase}/api/v1`
 
 export type QualityResult = { overview: QualityOverview; loadedAt: string }
