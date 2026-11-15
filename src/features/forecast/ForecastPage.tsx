@@ -248,6 +248,11 @@ export default function ForecastPage() {
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
 
   useEffect(() => {
+    const interval = window.setInterval(refresh, 60_000)
+    return () => window.clearInterval(interval)
+  }, [refresh])
+
+  useEffect(() => {
     const controller = new AbortController()
     setLoading(true)
 

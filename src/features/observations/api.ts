@@ -109,6 +109,7 @@ export async function getObservations(
     `${BASE_URL}/observations?${params.toString()}`,
     {
       method: 'GET',
+      cache: 'no-store',
       headers: {
         Accept: 'application/json',
       },
