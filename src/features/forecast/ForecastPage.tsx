@@ -145,15 +145,22 @@ function DualTimeClock() {
 function HorizonCard({
   horizon,
   forecast,
+  loading,
+  error,
 }: {
   horizon: ForecastHorizon
   forecast?: IssuedForecast
+  loading: boolean
+  error: string | null
 }) {
   const meta = HORIZON_TITLES[horizon]
 
   // Trạng thái đối chiếu
   const isEvaluated = forecast?.actual_value != null && forecast?.evaluated_at
-  const stateLabel = isEvaluated ? 'Đã có kết quả' : 'Đang chờ dữ liệu thật'
+  const stateLabel = error ? 'Không tải được dữ liệu'
+    : loading && !forecast ? 'Đang tải'
+      : !forecast ? 'Chưa có dự báo'
+        : isEvaluated ? 'Đã có kết quả' : 'Đang chờ dữ liệu thật'
 
   const targetDescription = horizon === '30min'
     ? 'Mốc quan trắc tiếp theo'
@@ -170,7 +177,11 @@ function HorizonCard({
           </span>
           <span
             className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold ${
-              isEvaluated
+              error
+                ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
+                : !forecast
+                  ? 'bg-slate-500/10 text-slate-300 border border-slate-500/20'
+                  : isEvaluated
                 ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
                 : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
             }`}
@@ -225,8 +236,12 @@ function HorizonCard({
           </div>
         </div>
       ) : (
-        <div className="py-6 text-center text-xs text-amber-300 font-mono border border-dashed border-slate-800 rounded-lg">
-          Chưa có dự báo cho kỳ hạn này
+        <div className={`py-6 px-3 text-center text-xs border border-dashed rounded-lg ${error ? 'text-rose-300 border-rose-900/60' : 'text-slate-300 border-slate-800'}`}>
+          {error ? `Không thể tải dự báo: ${error}`
+            : loading ? 'Đang tải dữ liệu dự báo...'
+              : horizon === '30min'
+                ? 'Chưa có dự báo. Cần đủ quan trắc đã kiểm định cho các mốc hiện tại, 30 phút, 1 giờ và 3 giờ trước.'
+                : 'Chưa có dự báo. Cần ít nhất 7 ngày Hawaii liên tiếp có dữ liệu đạt kiểm định để tạo đầu vào.'}
         </div>
       )}
 
@@ -247,6 +262,12 @@ export default function ForecastPage() {
     '30d': [],
   })
   const [loading, setLoading] = useState(true)
+  const [forecastErrors, setForecastErrors] = useState<Record<ForecastHorizon, string | null>>({
+    '30min': null,
+    '1d': null,
+    '7d': null,
+    '30d': null,
+  })
   const [refreshKey, setRefreshKey] = useState(0)
   const [historyHorizonFilter, setHistoryHorizonFilter] = useState<'all' | ForecastHorizon>('all')
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
@@ -263,6 +284,7 @@ export default function ForecastPage() {
   useEffect(() => {
     const controller = new AbortController()
     setLoading(true)
+    setForecastErrors({ '30min': null, '1d': null, '7d': null, '30d': null })
 
     Promise.allSettled([
       getShadowForecasts('30min', controller.signal),
@@ -270,14 +292,19 @@ export default function ForecastPage() {
       getShadowForecasts('7d', controller.signal),
       getShadowForecasts('30d', controller.signal),
     ])
-      .then(([r30m, r1d, r7d, r30d]) => {
+      .then((results) => {
         if (controller.signal.aborted) return
-        setShadowForecasts({
-          '30min': r30m.status === 'fulfilled' ? r30m.value : [],
-          '1d': r1d.status === 'fulfilled' ? r1d.value : [],
-          '7d': r7d.status === 'fulfilled' ? r7d.value : [],
-          '30d': r30d.status === 'fulfilled' ? r30d.value : [],
+        const forecasts = {} as Record<ForecastHorizon, IssuedForecast[]>
+        const errors = {} as Record<ForecastHorizon, string | null>
+        HORIZONS.forEach((horizon, index) => {
+          const result = results[index]
+          forecasts[horizon] = result.status === 'fulfilled' ? result.value : []
+          errors[horizon] = result.status === 'rejected'
+            ? result.reason instanceof Error ? result.reason.message : 'Lỗi không xác định'
+            : null
         })
+        setShadowForecasts(forecasts)
+        setForecastErrors(errors)
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false)
@@ -419,7 +446,7 @@ export default function ForecastPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4">
               {HORIZONS.map((h) => (
-                <HorizonCard key={h} horizon={h} forecast={latestByHorizon[h]} />
+                <HorizonCard key={h} horizon={h} forecast={latestByHorizon[h]} loading={loading} error={forecastErrors[h]} />
               ))}
             </div>
           </div>
