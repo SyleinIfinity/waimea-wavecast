@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 
 export default function DemoControlPage() {
+  const legacyDemoAvailable = import.meta.env.VITE_ENABLE_LEGACY_DEMO_ADMIN === 'true';
   const [preflight, setPreflight] = useState<DemoPreflight | null>(null);
   const [pipelineServices, setPipelineServices] = useState<PipelineServiceStatus[]>([]);
   const [pipelineJobs, setPipelineJobs] = useState<ProcessingJob[]>([]);
@@ -56,7 +57,7 @@ export default function DemoControlPage() {
   const [isRebuilding, setIsRebuilding] = useState(false);
   const [deletedSuccess, setDeletedSuccess] = useState(false);
   const [counts, setCounts] = useState<{ goldRows: number; bronzeRows: number; silverRows: number } | null>(null);
-  const [loadingPreflight, setLoadingPreflight] = useState(true);
+  const [loadingPreflight, setLoadingPreflight] = useState(legacyDemoAvailable);
   const [adminToken, setAdminToken] = useState('');
   const [resetPreview, setResetPreview] = useState<ObservationResetPreview | null>(null);
   const [resetConfirmation, setResetConfirmation] = useState('');
@@ -87,7 +88,7 @@ export default function DemoControlPage() {
       setResetMessage(`Đã xóa ${result.row_count.toLocaleString()} bản ghi trên DB ${resetPreview.environment}.`);
       setResetPreview(null);
       setResetConfirmation('');
-      refreshAllStatus();
+      if (legacyDemoAvailable) refreshAllStatus();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
       setResetPreview(null);
@@ -134,7 +135,7 @@ export default function DemoControlPage() {
   };
 
   useEffect(() => {
-    refreshAllStatus();
+    if (legacyDemoAvailable) refreshAllStatus();
   }, []);
 
   // Polling job tái tạo kết quả
@@ -254,10 +255,10 @@ export default function DemoControlPage() {
             <span>Khu vực quản trị hệ thống · Quyền Admin</span>
           </div>
           <h1 className="text-xl font-bold tracking-tight text-slate-100 sm:text-2xl">
-            Điều khiển diễn tập &amp; Giám sát xử lý Pipeline
+            {legacyDemoAvailable ? 'Điều khiển diễn tập & Giám sát xử lý Pipeline' : 'Quản lý dữ liệu quan trắc'}
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
-            Môi trường kiểm định phục vụ nghiệm thu: Thực nghiệm mô phỏng tình huống xóa mất mát kết quả phân tích tầng Gold và kích hoạt pipeline tái tạo từ Bronze/Silver mà <strong className="text-slate-200">không cần huấn luyện lại mô hình</strong>.
+            {legacyDemoAvailable ? <>Môi trường kiểm định phục vụ nghiệm thu: Thực nghiệm mô phỏng tình huống xóa mất mát kết quả phân tích tầng Gold và kích hoạt pipeline tái tạo từ Bronze/Silver mà <strong className="text-slate-200">không cần huấn luyện lại mô hình</strong>.</> : 'Xem trước và xác nhận thao tác xóa dữ liệu quan trắc bằng quyền quản trị Backend.'}
           </p>
         </div>
 
@@ -266,7 +267,7 @@ export default function DemoControlPage() {
             <Lock className="w-3.5 h-3.5" />
             <span>Môi trường: <strong className="text-white uppercase font-bold">{resetPreview?.environment ?? preflight?.environment ?? 'CHƯA XÁC ĐỊNH'}</strong></span>
           </div>
-          <button
+          {legacyDemoAvailable && <button
             type="button"
             onClick={refreshAllStatus}
             disabled={loadingPreflight}
@@ -274,7 +275,7 @@ export default function DemoControlPage() {
           >
             <RefreshCw size={14} className={loadingPreflight ? 'animate-spin' : ''} />
             <span>Làm mới</span>
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -284,7 +285,7 @@ export default function DemoControlPage() {
         <div>
           <strong className="text-white font-semibold">Cơ chế bảo vệ an toàn (Admin Guardrails):</strong>
           <p className="mt-1 text-slate-300">
-            Thao tác xóa Gold diễn tập ở các nút bên dưới chỉ dành cho Staging. Nút xóa quan trắc riêng yêu cầu Admin API Token, xem trước và xác nhận; production chỉ được bật khi Backend đã xác nhận backup. Model và metadata nguồn được bảo tồn.
+            Nút xóa quan trắc yêu cầu mã quản trị Backend, xem trước và xác nhận bằng mật khẩu riêng trên production. Model và metadata nguồn được bảo tồn.
           </p>
         </div>
       </div>
@@ -298,10 +299,10 @@ export default function DemoControlPage() {
       <section className="rounded-xl border border-rose-800/50 bg-[#0f1520] p-5 space-y-3">
         <h2 className="text-sm font-semibold text-rose-300 flex items-center gap-2"><Trash2 size={16} /> Xóa dữ liệu quan trắc</h2>
         <p className="text-xs text-slate-300">Xóa bản ghi Bronze, Silver và Gold phát sinh từ quan trắc trên môi trường được API xác nhận. Model và metadata nguồn được giữ lại. Production chỉ cho phép khi quản trị viên đã bật quyền xóa và xác nhận backup ở Backend.</p>
-        <label className="block text-xs text-slate-300" htmlFor="admin-api-token">Admin API Token</label>
+        <label className="block text-xs text-slate-300" htmlFor="admin-api-token">Mã quản trị Backend</label>
         <input id="admin-api-token" type="password" autoComplete="off" value={adminToken}
           onChange={(event) => { setAdminToken(event.target.value); setResetPreview(null); setResetPassword(''); }}
-          placeholder="Nhập token của Database API diễn tập"
+          placeholder="Nhập mã quản trị để xác thực với Backend"
           className="w-full max-w-md rounded-lg border border-slate-700 bg-[#090d14] px-3 py-2 text-sm text-white" />
         <p className="text-[11px] text-slate-400">Token chỉ nằm trong bộ nhớ trang này; không lưu trong localStorage hoặc bản build frontend.</p>
         <button type="button" onClick={handleResetPreview} disabled={resetBusy || !adminToken.trim()}
@@ -324,6 +325,7 @@ export default function DemoControlPage() {
         {resetMessage && <p role="status" className="text-xs text-emerald-300">{resetMessage}</p>}
       </section>
 
+      {legacyDemoAvailable && <>
       {/* METRIC COUNTERS (BRONZE / SILVER / GOLD) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* BRONZE */}
@@ -782,6 +784,7 @@ export default function DemoControlPage() {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 }
