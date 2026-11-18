@@ -6,7 +6,10 @@ import {
   rebuildGoldPatterns,
   pollJobStatus,
   getPipelineStatus,
+  previewObservationReset,
+  resetObservations,
 } from '../../api/client';
+import type { ObservationResetPreview } from '../../api/client';
 import type {
   DemoPreflight,
   PreviewDeleteResponse,
@@ -54,6 +57,45 @@ export default function DemoControlPage() {
   const [deletedSuccess, setDeletedSuccess] = useState(false);
   const [counts, setCounts] = useState<{ goldRows: number; bronzeRows: number; silverRows: number } | null>(null);
   const [loadingPreflight, setLoadingPreflight] = useState(true);
+  const [adminToken, setAdminToken] = useState('');
+  const [resetPreview, setResetPreview] = useState<ObservationResetPreview | null>(null);
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+
+  const handleResetPreview = async () => {
+    setError(null);
+    setResetMessage(null);
+    setResetPreview(null);
+    setResetBusy(true);
+    try {
+      setResetPreview(await previewObservationReset(adminToken));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
+  const handleObservationReset = async () => {
+    if (!resetPreview || resetConfirmation !== (resetPreview.environment === 'production' ? 'RESET PRODUCTION OBSERVATIONS' : 'RESET LOCAL OBSERVATIONS') || (resetPreview.environment === 'production' && !resetPassword)) return;
+    setError(null);
+    setResetBusy(true);
+    try {
+      const result = await resetObservations(adminToken, resetPreview.dry_run_id, resetPreview.environment, resetPassword);
+      setResetMessage(`Đã xóa ${result.row_count.toLocaleString()} bản ghi trên DB ${resetPreview.environment}.`);
+      setResetPreview(null);
+      setResetConfirmation('');
+      refreshAllStatus();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+      setResetPreview(null);
+    } finally {
+      setResetPassword('');
+      setResetBusy(false);
+    }
+  };
 
   // Load preflight and pipeline status
   const refreshAllStatus = () => {
@@ -222,7 +264,7 @@ export default function DemoControlPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-950/40 border border-amber-800/60 text-xs font-mono text-amber-300">
             <Lock className="w-3.5 h-3.5" />
-            <span>Môi trường: <strong className="text-white uppercase font-bold">{preflight?.environment ?? 'STAGING'}</strong></span>
+            <span>Môi trường: <strong className="text-white uppercase font-bold">{resetPreview?.environment ?? preflight?.environment ?? 'CHƯA XÁC ĐỊNH'}</strong></span>
           </div>
           <button
             type="button"
@@ -242,7 +284,7 @@ export default function DemoControlPage() {
         <div>
           <strong className="text-white font-semibold">Cơ chế bảo vệ an toàn (Admin Guardrails):</strong>
           <p className="mt-1 text-slate-300">
-            Thao tác xóa và tái tạo chỉ được phép thực hiện trên <strong>Cơ sở dữ liệu diễn tập riêng (Staging Sandbox) của Waimea</strong>. Hệ thống nghiêm cấm và từ chối mọi yêu cầu xóa trên cơ sở dữ liệu Cloud SQL Production hoặc dữ liệu của các dịch vụ khác. Dữ liệu thô <code>bronze</code> và quan trắc chuẩn hóa <code>silver</code> được lưu trữ bất biến và bảo vệ tuyệt đối.
+            Thao tác xóa Gold diễn tập ở các nút bên dưới chỉ dành cho Staging. Nút xóa quan trắc riêng yêu cầu Admin API Token, xem trước và xác nhận; production chỉ được bật khi Backend đã xác nhận backup. Model và metadata nguồn được bảo tồn.
           </p>
         </div>
       </div>
@@ -252,6 +294,35 @@ export default function DemoControlPage() {
           Thông báo lỗi Admin: {error}
         </div>
       )}
+
+      <section className="rounded-xl border border-rose-800/50 bg-[#0f1520] p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-rose-300 flex items-center gap-2"><Trash2 size={16} /> Xóa dữ liệu quan trắc</h2>
+        <p className="text-xs text-slate-300">Xóa bản ghi Bronze, Silver và Gold phát sinh từ quan trắc trên môi trường được API xác nhận. Model và metadata nguồn được giữ lại. Production chỉ cho phép khi quản trị viên đã bật quyền xóa và xác nhận backup ở Backend.</p>
+        <label className="block text-xs text-slate-300" htmlFor="admin-api-token">Admin API Token</label>
+        <input id="admin-api-token" type="password" autoComplete="off" value={adminToken}
+          onChange={(event) => { setAdminToken(event.target.value); setResetPreview(null); setResetPassword(''); }}
+          placeholder="Nhập token của Database API diễn tập"
+          className="w-full max-w-md rounded-lg border border-slate-700 bg-[#090d14] px-3 py-2 text-sm text-white" />
+        <p className="text-[11px] text-slate-400">Token chỉ nằm trong bộ nhớ trang này; không lưu trong localStorage hoặc bản build frontend.</p>
+        <button type="button" onClick={handleResetPreview} disabled={resetBusy || !adminToken.trim()}
+          className="rounded-lg bg-slate-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">Xem trước dữ liệu sẽ xóa</button>
+        {resetPreview && <div className="rounded-lg border border-amber-700/50 p-3 space-y-2 text-xs">
+          <p className="text-amber-300">Môi trường: <strong>{resetPreview.environment.toUpperCase()}</strong>. Sẽ xóa {resetPreview.row_count.toLocaleString()} bản ghi ở {Object.keys(resetPreview.affected_tables).length} bảng. Xác nhận có hiệu lực {resetPreview.expires_in_seconds} giây.</p>
+          <p className="text-slate-300">Nhập <code>{resetPreview.environment === 'production' ? 'RESET PRODUCTION OBSERVATIONS' : 'RESET LOCAL OBSERVATIONS'}</code> để xác nhận:</p>
+          <input type="text" value={resetConfirmation} onChange={(event) => setResetConfirmation(event.target.value)}
+            className="w-full max-w-md rounded-lg border border-slate-700 bg-[#090d14] px-3 py-2 text-white" />
+          {resetPreview.environment === 'production' && <>
+            <label htmlFor="reset-password" className="block text-slate-300">Mật khẩu xác nhận xóa production</label>
+            <input id="reset-password" type="password" autoComplete="off" value={resetPassword}
+              onChange={(event) => setResetPassword(event.target.value)}
+              className="w-full max-w-md rounded-lg border border-slate-700 bg-[#090d14] px-3 py-2 text-white" />
+          </>}
+          <div><button type="button" onClick={handleObservationReset}
+            disabled={resetBusy || resetConfirmation !== (resetPreview.environment === 'production' ? 'RESET PRODUCTION OBSERVATIONS' : 'RESET LOCAL OBSERVATIONS') || (resetPreview.environment === 'production' && !resetPassword)}
+            className="rounded-lg bg-rose-700 px-4 py-2 font-semibold text-white disabled:opacity-40">Xóa trên DB {resetPreview.environment}</button></div>
+        </div>}
+        {resetMessage && <p role="status" className="text-xs text-emerald-300">{resetMessage}</p>}
+      </section>
 
       {/* METRIC COUNTERS (BRONZE / SILVER / GOLD) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

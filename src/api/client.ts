@@ -206,3 +206,30 @@ export async function rebuildGoldPatterns(patternTypes: string[]): Promise<{ job
 export async function pollJobStatus(jobId: string): Promise<ProcessingJob> {
   return api<ProcessingJob>(`/admin/jobs/${encodeURIComponent(jobId)}`);
 }
+
+export type ObservationResetPreview = {
+  environment: 'staging' | 'production';
+  dry_run_id: string;
+  affected_tables: Record<string, number>;
+  row_count: number;
+  expires_in_seconds: number;
+  preserved: string[];
+};
+
+function adminHeaders(token: string): HeadersInit {
+  if (!token.trim()) throw new Error('Hãy nhập Admin API Token.');
+  return { 'X-Admin-Token': token.trim(), 'Content-Type': 'application/json' };
+}
+
+export function previewObservationReset(token: string): Promise<ObservationResetPreview> {
+  return api('/admin/demo/observations/preview-reset', {
+    method: 'POST', headers: adminHeaders(token),
+  });
+}
+
+export function resetObservations(token: string, dryRunId: string, environment: 'staging' | 'production', password: string): Promise<{ status: string; row_count: number }> {
+  return api('/admin/demo/observations/reset', {
+    method: 'POST', headers: adminHeaders(token),
+    body: JSON.stringify({ dry_run_id: dryRunId, confirmation: environment === 'production' ? 'RESET PRODUCTION OBSERVATIONS' : 'RESET LOCAL OBSERVATIONS', password: environment === 'production' ? password : undefined }),
+  });
+}
