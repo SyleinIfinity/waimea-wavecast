@@ -1,24 +1,14 @@
-import { useState, useEffect } from 'react';
-import { getClusteringSummary } from '../../api/client';
-import type { ClusteringSummary } from '../../api/types';
+import { useState } from 'react';
+import { ClusterScatterChart } from './ClusterScatterChart';
+import { useClusteringSummary } from './useClusteringSummary';
 import EChart from '../../components/charts/EChart';
-import { hstToday } from '../data-quality/quality';
-import { Calendar as CalendarIcon, ChartScatter, Compass, Info, ChevronDown, ChevronUp, Layers, AlertCircle } from 'lucide-react';
-import type { EChartsOption, ScatterSeriesOption } from 'echarts';
+import { Calendar as CalendarIcon, Compass, Info, ChevronDown, ChevronUp, Layers, AlertCircle } from 'lucide-react';
+import type { EChartsOption } from 'echarts';
 
 export default function ClusteringPage() {
-  const [summary, setSummary] = useState<ClusteringSummary | null>(null);
+  const { summary, error } = useClusteringSummary();
   const [selectedCluster, setSelectedCluster] = useState<number | null>(null);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getClusteringSummary(hstToday())
-      .then(setSummary)
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)))
-      .finally(() => setLoading(false));
-  }, []);
 
   if (error) {
     return (
@@ -28,7 +18,7 @@ export default function ClusteringPage() {
     );
   }
 
-  if (loading || !summary) {
+  if (!summary) {
     return (
       <div className="py-20 text-center text-slate-400">
         <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-slate-400 border-t-transparent mb-3" />
@@ -38,40 +28,6 @@ export default function ClusteringPage() {
   }
 
   const { centroids, assignments, silhouette_score, davies_bouldin_index, k } = summary;
-  const scatterSeries: ScatterSeriesOption[] = centroids.map(cluster => ({
-    name: `Nhóm ${cluster.cluster_id}`,
-    type: 'scatter',
-    symbolSize: 10,
-    itemStyle: { color: cluster.color, opacity: 0.75 },
-    data: assignments.flatMap(assignment => {
-      const { cluster_id, date_hst, dominant_period_mean_s, wave_height_median_m } = assignment;
-      if (cluster_id !== cluster.cluster_id || dominant_period_mean_s == null || wave_height_median_m == null) return [];
-      return [{ name: date_hst, value: [dominant_period_mean_s, wave_height_median_m] }];
-    }),
-  }));
-  const scatterCount = scatterSeries.reduce((count, series) => count + (series.data?.length ?? 0), 0);
-  const scatterOptions: EChartsOption = {
-    grid: { left: 64, right: 24, top: 24, bottom: 80 },
-    legend: { bottom: 4, textStyle: { color: '#cbd5e1' }, icon: 'circle' },
-    xAxis: {
-      type: 'value', scale: true, name: 'Chu kỳ sóng trội trung bình (s)',
-      nameLocation: 'middle', nameGap: 32, nameTextStyle: { color: '#cbd5e1' },
-    },
-    yAxis: {
-      type: 'value', scale: true, name: 'Độ cao sóng trung vị (m)',
-      nameLocation: 'middle', nameGap: 42, nameTextStyle: { color: '#cbd5e1' },
-      splitLine: { lineStyle: { color: '#1e2838' } },
-    },
-    tooltip: {
-      trigger: 'item', renderMode: 'richText', confine: true,
-      formatter: (params: unknown) => {
-        const { name, seriesName, value: [period, height] } = params as { name: string; seriesName: string; value: [number, number] };
-        return `${name} (Hawaii) · ${seriesName}\nChu kỳ sóng ${period.toFixed(1)} s\nĐộ cao sóng ${height.toFixed(2)} m`;
-      },
-    },
-    series: scatterSeries,
-  };
-
   const radarIndicators = centroids[0].features.map((f) => ({
     name: f.label,
     min: Math.min(0, ...centroids.map((c) => c.features.find((v) => v.feature_name === f.feature_name)?.original_value ?? 0)) * 1.1,
@@ -203,19 +159,7 @@ export default function ClusteringPage() {
         </div>
       </div>
 
-      <section aria-labelledby="cluster-scatter-title" className="rounded-xl border border-slate-800 bg-[#0f1520] p-5">
-        <h2 id="cluster-scatter-title" className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-          <ChartScatter className="w-4 h-4 text-cyan-400" /> Biểu đồ phân tán theo cụm
-        </h2>
-        {scatterCount > 0 ? (
-          <>
-            <p className="mt-1 text-xs text-slate-400">Mỗi điểm là một ngày quan trắc theo giờ Hawaii. Màu thể hiện cụm đã gán. Hiển thị {scatterCount}/{assignments.length} ngày.</p>
-            <EChart options={scatterOptions} height={350} />
-          </>
-        ) : (
-          <p className="mt-3 text-sm text-slate-400">Chưa có ngày phân cụm đủ cả độ cao sóng và chu kỳ sóng để vẽ.</p>
-        )}
-      </section>
+      <ClusterScatterChart summary={summary} />
 
       {/* CLUSTERS SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
