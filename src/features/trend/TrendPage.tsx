@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as echarts from 'echarts'
 import type { EChartsOption } from 'echarts'
 import {
@@ -10,7 +10,9 @@ import { defaultTrendMonths, loadTrend, type TrendPoint } from './data'
 type Metric = 'WVHT' | 'DPD' | 'WTMP'
 type ComponentKey = 'observed' | 'trend' | 'seasonal' | 'residual'
 type View = 'grid' | 'stacked'
+type ZoomRange = [number, number]
 const PAGE_SIZE = 12
+const MIN_ZOOM_SPAN = 5
 const meta: Record<Metric, { title: string; unit: string }> = {
   WVHT: { title: 'Wave Height', unit: 'm' },
   DPD: { title: 'Dominant Period', unit: 's' },
@@ -49,7 +51,7 @@ function formatValue(n: number | null | undefined, unit?: string) {
   if (n === null || n === undefined) return '—'
   return `${n.toLocaleString('vi-VN', { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ''}`
 }
-function chartOption(key: ComponentKey, rows: TrendPoint[], metric: Metric, zoom: [number, number]): EChartsOption {
+function chartOption(key: ComponentKey, rows: TrendPoint[], metric: Metric): EChartsOption {
   const spec = components.find(p => p.key === key)!
   const unit = meta[metric].unit
   const deviation = key === 'seasonal' || key === 'residual'
@@ -70,7 +72,10 @@ function chartOption(key: ComponentKey, rows: TrendPoint[], metric: Metric, zoom
       type: 'value', name: unit, scale: true, nameTextStyle: { color: '#a2bfd1' },
       axisLabel: { color: '#a2bfd1' }, splitLine: { lineStyle: { color: '#244459' } },
     },
-    dataZoom: [{ type: 'inside', start: zoom[0], end: zoom[1], zoomOnMouseWheel: false, moveOnMouseMove: false, moveOnMouseWheel: false }],
+    dataZoom: [{
+      type: 'inside', xAxisIndex: 0, minSpan: MIN_ZOOM_SPAN,
+      zoomOnMouseWheel: true, moveOnMouseMove: false, moveOnMouseWheel: false,
+    }],
     series: [{
       name: spec.label, type: 'line', smooth: key !== 'residual', connectNulls: false,
       showSymbol: rows.length <= 18, symbolSize: 6,
@@ -85,16 +90,18 @@ function chartOption(key: ComponentKey, rows: TrendPoint[], metric: Metric, zoom
   }
 }
 
-// Đồng bộ tooltip bằng ECharts group, không chỉnh component EChart dùng chung của TL03.
-function SyncedChart({ option, group, height }: { option: EChartsOption; group: string; height: number }) {
+function TrendChart({ option, height, sharedZoom }: {
+  option: EChartsOption
+  height: number
+  sharedZoom: ZoomRange
+}) {
   const element = useRef<HTMLDivElement>(null)
   const instance = useRef<echarts.ECharts | null>(null)
   useEffect(() => {
     if (!element.current) return
     const chart = echarts.init(element.current, 'dark', { renderer: 'svg' })
     instance.current = chart
-    chart.group = group
-    echarts.connect(group)
+    chart.setOption(option)
     const observer = new ResizeObserver(() => chart.resize())
     observer.observe(element.current)
     return () => {
@@ -102,8 +109,10 @@ function SyncedChart({ option, group, height }: { option: EChartsOption; group: 
       chart.dispose()
       instance.current = null
     }
-  }, [group])
-  useEffect(() => { instance.current?.setOption(option, { notMerge: true }) }, [option])
+  }, [option])
+  useEffect(() => {
+    instance.current?.dispatchAction({ type: 'dataZoom', start: sharedZoom[0], end: sharedZoom[1] }, { silent: true })
+  }, [option, sharedZoom])
   return <div ref={element} style={{ width: '100%', height }} role="img" aria-label="Biểu đồ phân rã chuỗi thời gian" />
 }
 
@@ -122,8 +131,6 @@ function saveText(filename: string, text: string) {
 }
 
 export default function TrendPage() {
-  const reactId = useId().replace(/[^\w-]/g, '')
-  const group = `s04-linked-${reactId}`
   const [fromText, setFromText] = useState(monthLabel(defaultRange.from))
   const [toText, setToText] = useState(monthLabel(defaultRange.to))
   const [metric, setMetric] = useState<Metric>('WVHT')
@@ -131,7 +138,7 @@ export default function TrendPage() {
   const [showResidual, setShowResidual] = useState(true)
   const [showMethod, setShowMethod] = useState(false)
   const [view, setView] = useState<View>('grid')
-  const [zoom, setZoom] = useState<[number, number]>([0, 100])
+  const [sharedZoom, setSharedZoom] = useState<ZoomRange>([0, 100])
   const [page, setPage] = useState(1)
   const [refresh, setRefresh] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -149,7 +156,7 @@ export default function TrendPage() {
       if (controller.signal.aborted) return
       setData(result.items)
       setMethod(result.method); setPeriod(result.seasonalPeriod); setNote(result.note)
-      setZoom([0, 100]); setPage(1)
+      setSharedZoom([0, 100]); setPage(1)
     }).catch((reason: unknown) => {
       if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason))
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
@@ -158,11 +165,11 @@ export default function TrendPage() {
 
   const sufficient = data.some(r => r.trend !== null && r.seasonal !== null && r.residual !== null)
   const options = useMemo(() => ({
-    observed: chartOption('observed', data, applied.metric, zoom),
-    trend: chartOption('trend', data, applied.metric, zoom),
-    seasonal: chartOption('seasonal', data, applied.metric, zoom),
-    residual: chartOption('residual', data, applied.metric, zoom),
-  }), [data, applied.metric, zoom])
+    observed: chartOption('observed', data, applied.metric),
+    trend: chartOption('trend', data, applied.metric),
+    seasonal: chartOption('seasonal', data, applied.metric),
+    residual: chartOption('residual', data, applied.metric),
+  }), [data, applied.metric])
   const displayed = components.filter(p => p.key !== 'residual' || showResidual)
   const validTrend = data.filter(r => r.trend !== null).length
   const observed = data.map(r => r.observed).filter((v): v is number => typeof v === 'number')
@@ -186,7 +193,7 @@ export default function TrendPage() {
   }
   function reset() {
     setFromText(monthLabel(defaultRange.from)); setToText(monthLabel(defaultRange.to)); setMetric('WVHT')
-    setShowResidual(true); setZoom([0, 100]); setShowMethod(false); setPage(1); setView('grid')
+    setShowResidual(true); setSharedZoom([0, 100]); setShowMethod(false); setPage(1); setView('grid')
     setApplied({ ...defaultRange, metric: 'WVHT' }); setRefresh(v => v + 1)
   }
   function exportCSV() {
@@ -306,11 +313,23 @@ export default function TrendPage() {
       <section className={panel}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 font-bold"><ChartNoAxesCombined size={18} className="text-cyan-400"/> Synchronized Time Window</div>
-          <button type="button" onClick={() => setZoom([0, 100])} className="rounded-lg border border-[#31556b] px-3 py-2 text-xs hover:bg-[#193b51]">Đặt lại Zoom</button>
+          <button type="button" onClick={() => setSharedZoom([0, 100])} className="rounded-lg border border-[#31556b] px-3 py-2 text-xs hover:bg-[#193b51]">Đặt lại Zoom</button>
         </div>
-        <p className="mb-3 mt-2 text-xs text-slate-400">Thanh Zoom bên dưới áp dụng cho tất cả biểu đồ. Tooltip và vị trí trục X đồng bộ giữa các khung.</p>
-        <div className="flex items-center gap-3"><span className="w-14 text-xs text-slate-400">Bắt đầu</span><input aria-label="Bắt đầu zoom" type="range" min={0} max={95} value={zoom[0]} onChange={e => setZoom([Math.min(Number(e.target.value), zoom[1] - 5), zoom[1]])} className="min-w-0 flex-1 accent-cyan-400"/><span className="w-11 text-right text-xs text-cyan-300">{zoom[0]}%</span></div>
-        <div className="mt-2 flex items-center gap-3"><span className="w-14 text-xs text-slate-400">Kết thúc</span><input aria-label="Kết thúc zoom" type="range" min={5} max={100} value={zoom[1]} onChange={e => setZoom([zoom[0], Math.max(Number(e.target.value), zoom[0] + 5)])} className="min-w-0 flex-1 accent-cyan-400"/><span className="w-11 text-right text-xs text-cyan-300">{zoom[1]}%</span></div>
+        <p className="mb-3 mt-2 text-xs text-slate-400">Lăn chuột trong vùng vẽ để thu phóng riêng biểu đồ dưới con trỏ. Dùng hai thanh trượt để chọn cùng khoảng thời gian cho tất cả biểu đồ.</p>
+        <div className="flex items-center gap-3">
+          <span className="w-14 text-xs text-slate-400">Bắt đầu</span>
+          <input aria-label="Bắt đầu zoom" type="range" min={0} max={100 - MIN_ZOOM_SPAN} value={sharedZoom[0]}
+            onChange={e => setSharedZoom([Math.min(e.currentTarget.valueAsNumber, sharedZoom[1] - MIN_ZOOM_SPAN), sharedZoom[1]])}
+            className="min-w-0 flex-1 accent-cyan-400"/>
+          <span className="w-11 text-right text-xs text-cyan-300">{sharedZoom[0]}%</span>
+        </div>
+        <div className="mt-2 flex items-center gap-3">
+          <span className="w-14 text-xs text-slate-400">Kết thúc</span>
+          <input aria-label="Kết thúc zoom" type="range" min={MIN_ZOOM_SPAN} max={100} value={sharedZoom[1]}
+            onChange={e => setSharedZoom([sharedZoom[0], Math.max(e.currentTarget.valueAsNumber, sharedZoom[0] + MIN_ZOOM_SPAN)])}
+            className="min-w-0 flex-1 accent-cyan-400"/>
+          <span className="w-11 text-right text-xs text-cyan-300">{sharedZoom[1]}%</span>
+        </div>
       </section>
 
       {loading ? <div className="h-64 animate-pulse rounded-2xl bg-[#193b50]"/> : !sufficient ? (
@@ -328,7 +347,7 @@ export default function TrendPage() {
             {displayed.map(p => <section key={p.key} className={panel}>
               <div className="mb-1 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: p.color }}/><h3 className="font-bold text-white">{p.label}</h3></div>
               <p className="mb-2 text-xs text-[#9bb8cd]">{p.description} · {meta[applied.metric].unit}</p>
-              <SyncedChart option={options[p.key]} group={group} height={view === 'stacked' ? 210 : 235}/>
+              <TrendChart option={options[p.key]} height={view === 'stacked' ? 210 : 235} sharedZoom={sharedZoom}/>
             </section>)}
           </div>
           <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-200">Dữ liệu thiếu ở biên là bình thường: centered 12-month moving average không thể tính Trend tại các tháng chưa đủ cửa sổ. Seasonal và Residual cũng để trống ở những tháng đó; không nội suy để lấp khoảng trống. Có {completePoints}/{data.length} tháng đủ cả bốn thành phần.</p>

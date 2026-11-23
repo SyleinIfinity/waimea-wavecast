@@ -26,7 +26,7 @@ import {
 import EChart from '../../components/charts/EChart'
 import TimeSeriesPage from '../time-series/TimeSeriesPage'
 import TrendPage from '../trend/TrendPage'
-import { getObservations, type Observation } from '../observations/api'
+import { getObservations, getObservationsInRange, type Observation } from '../observations/api'
 
 type Metric = 'WVHT' | 'DPD' | 'APD' | 'MWD' | 'WTMP'
 type LayerType = 'silver' | 'bronze' | 'gold'
@@ -112,20 +112,15 @@ export default function DataExplorerPage({
     setChartLoading(true)
     setChartError(null)
 
-    getObservations(
+    getObservationsInRange(
       {
         start: `${appliedChartRange.start}T00:00:00.000Z`,
         end: `${appliedChartRange.end}T23:59:59.999Z`,
-        limit: 100,
       },
       controller.signal
     )
-      .then((res) => {
-        if (!controller.signal.aborted) {
-          // Sắp xếp tăng dần theo thời gian để vẽ biểu đồ
-          const sorted = [...res.items].sort((a, b) => a.observed_at.localeCompare(b.observed_at))
-          setChartData(sorted)
-        }
+      .then((observations) => {
+        if (!controller.signal.aborted) setChartData(observations)
       })
       .catch((err) => {
         if (!controller.signal.aborted) {
@@ -347,6 +342,7 @@ export default function DataExplorerPage({
                 <span className="text-slate-400 font-medium">Từ (UTC):</span>
                 <input
                   type="date"
+                  aria-label="Từ ngày (UTC)"
                   value={chartStart}
                   onChange={(e) => setChartStart(e.target.value)}
                   className="rounded-lg bg-slate-900 border border-slate-700 px-2.5 py-1 text-slate-100 font-mono text-xs focus:border-sky-500 focus:outline-none"
@@ -357,6 +353,7 @@ export default function DataExplorerPage({
                 <span className="text-slate-400 font-medium">Đến (UTC):</span>
                 <input
                   type="date"
+                  aria-label="Đến ngày (UTC)"
                   value={chartEnd}
                   onChange={(e) => setChartEnd(e.target.value)}
                   className="rounded-lg bg-slate-900 border border-slate-700 px-2.5 py-1 text-slate-100 font-mono text-xs focus:border-sky-500 focus:outline-none"

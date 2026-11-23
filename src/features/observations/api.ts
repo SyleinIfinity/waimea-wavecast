@@ -174,19 +174,40 @@ export async function getObservations(
       ? (data as Record<string, unknown>)
       : {}
 
-  const nextCursor =
+  const rawCursor =
     body.next_cursor ??
     pagination.next_cursor ??
     dataObject.next_cursor ??
     null
+  const nextCursor = typeof rawCursor === 'string' && rawCursor.length > 0 ? rawCursor : null
+
+  if ((body.has_more === true || pagination.has_more === true || dataObject.has_more === true) && !nextCursor) {
+    throw new Error('Backend báo còn dữ liệu nhưng thiếu mốc để tải trang tiếp theo.')
+  }
 
   if (rows.length === 0) throw new Error("Backend chưa có dữ liệu quan trắc trong khoảng ngày đã chọn.")
 
   return {
     items: rows.map(normalizeObservation),
-    nextCursor:
-      typeof nextCursor === 'string' && nextCursor.length > 0
-        ? nextCursor
-        : null,
+    nextCursor,
   }
+}
+
+export async function getObservationsInRange(
+  range: Pick<ObservationFilters, 'start' | 'end'>,
+  signal?: AbortSignal
+): Promise<Observation[]> {
+  const observations = new Map<string, Observation>()
+  const cursors = new Set<string>()
+  let cursor: string | undefined
+  do {
+    const page = await getObservations({ ...range, cursor, limit: 1000 }, signal)
+    for (const item of page.items) observations.set(item.observed_at, item)
+    cursor = page.nextCursor ?? undefined
+    if (cursor) {
+      if (cursors.has(cursor)) throw new Error('Backend lặp lại mốc phân trang quan trắc.')
+      cursors.add(cursor)
+    }
+  } while (cursor)
+  return [...observations.values()].sort((a, b) => Date.parse(a.observed_at) - Date.parse(b.observed_at))
 }
