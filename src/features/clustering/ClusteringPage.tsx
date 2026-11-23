@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { getClusteringSummary } from '../../api/client';
 import type { ClusteringSummary } from '../../api/types';
 import EChart from '../../components/charts/EChart';
-import { Calendar as CalendarIcon, Compass, Info, ChevronDown, ChevronUp, Layers, AlertCircle } from 'lucide-react';
-import type { EChartsOption } from 'echarts';
+import { hstToday } from '../data-quality/quality';
+import { Calendar as CalendarIcon, ChartScatter, Compass, Info, ChevronDown, ChevronUp, Layers, AlertCircle } from 'lucide-react';
+import type { EChartsOption, ScatterSeriesOption } from 'echarts';
 
 export default function ClusteringPage() {
   const [summary, setSummary] = useState<ClusteringSummary | null>(null);
@@ -13,7 +14,7 @@ export default function ClusteringPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getClusteringSummary()
+    getClusteringSummary(hstToday())
       .then(setSummary)
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)))
       .finally(() => setLoading(false));
@@ -37,6 +38,39 @@ export default function ClusteringPage() {
   }
 
   const { centroids, assignments, silhouette_score, davies_bouldin_index, k } = summary;
+  const scatterSeries: ScatterSeriesOption[] = centroids.map(cluster => ({
+    name: `Nhóm ${cluster.cluster_id}`,
+    type: 'scatter',
+    symbolSize: 10,
+    itemStyle: { color: cluster.color, opacity: 0.75 },
+    data: assignments.flatMap(assignment => {
+      const { cluster_id, date_hst, dominant_period_mean_s, wave_height_median_m } = assignment;
+      if (cluster_id !== cluster.cluster_id || dominant_period_mean_s == null || wave_height_median_m == null) return [];
+      return [{ name: date_hst, value: [dominant_period_mean_s, wave_height_median_m] }];
+    }),
+  }));
+  const scatterCount = scatterSeries.reduce((count, series) => count + (series.data?.length ?? 0), 0);
+  const scatterOptions: EChartsOption = {
+    grid: { left: 64, right: 24, top: 24, bottom: 80 },
+    legend: { bottom: 4, textStyle: { color: '#cbd5e1' }, icon: 'circle' },
+    xAxis: {
+      type: 'value', scale: true, name: 'Chu kỳ sóng trội trung bình (s)',
+      nameLocation: 'middle', nameGap: 32, nameTextStyle: { color: '#cbd5e1' },
+    },
+    yAxis: {
+      type: 'value', scale: true, name: 'Độ cao sóng trung vị (m)',
+      nameLocation: 'middle', nameGap: 42, nameTextStyle: { color: '#cbd5e1' },
+      splitLine: { lineStyle: { color: '#1e2838' } },
+    },
+    tooltip: {
+      trigger: 'item', renderMode: 'richText', confine: true,
+      formatter: (params: unknown) => {
+        const { name, seriesName, value: [period, height] } = params as { name: string; seriesName: string; value: [number, number] };
+        return `${name} (Hawaii) · ${seriesName}\nChu kỳ sóng ${period.toFixed(1)} s\nĐộ cao sóng ${height.toFixed(2)} m`;
+      },
+    },
+    series: scatterSeries,
+  };
 
   const radarIndicators = centroids[0].features.map((f) => ({
     name: f.label,
@@ -143,7 +177,7 @@ export default function ClusteringPage() {
             Phân nhóm điều kiện sóng tự nhiên (K-Means)
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
-            Thuật toán K-Means tự động gom nhóm các ngày quan sát theo đặc trưng vi khí hậu biển (độ cao sóng, chu kỳ sóng và nhiệt độ mặt biển) nhằm tìm ra các kiểu hình thái thời tiết biển phổ biến tại Vịnh Waimea.
+            K-Means gom nhóm các ngày dựa trên lịch sử độ cao và chu kỳ sóng, hướng sóng, mùa trong năm và độ đầy đủ của quan trắc.
           </p>
         </div>
 
@@ -165,9 +199,23 @@ export default function ClusteringPage() {
       <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-xs leading-relaxed text-amber-200 flex items-start gap-3">
         <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
         <div>
-          <strong className="text-amber-100 font-semibold">Lưu ý khoa học:</strong> Đây là phân nhóm dữ liệu có tính chất <em>khám phá quy luật tự nhiên</em> (exploratory clustering) dựa trên số đo vật lý của sóng và nhiệt độ mặt biển, <strong>không phải là phân loại mức độ nguy hiểm hay cảnh báo an toàn</strong> khi tham gia hoạt động tắm biển hoặc lướt sóng.
+          Các nhóm mô tả điều kiện sóng đã quan trắc. Dùng thông tin cảnh báo chính thức khi quyết định tắm biển hoặc lướt sóng.
         </div>
       </div>
+
+      <section aria-labelledby="cluster-scatter-title" className="rounded-xl border border-slate-800 bg-[#0f1520] p-5">
+        <h2 id="cluster-scatter-title" className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+          <ChartScatter className="w-4 h-4 text-cyan-400" /> Biểu đồ phân tán theo cụm
+        </h2>
+        {scatterCount > 0 ? (
+          <>
+            <p className="mt-1 text-xs text-slate-400">Mỗi điểm là một ngày quan trắc theo giờ Hawaii. Màu thể hiện cụm đã gán. Hiển thị {scatterCount}/{assignments.length} ngày.</p>
+            <EChart options={scatterOptions} height={350} />
+          </>
+        ) : (
+          <p className="mt-3 text-sm text-slate-400">Chưa có ngày phân cụm đủ cả độ cao sóng và chu kỳ sóng để vẽ.</p>
+        )}
+      </section>
 
       {/* CLUSTERS SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -302,7 +350,7 @@ export default function ClusteringPage() {
                 <strong>Quy trình chuẩn hóa:</strong> Dữ liệu quan trắc từ bảng Silver được tổng hợp theo ngày (múi giờ Hawaii HST) và chuẩn hóa theo thang đo Z-score trước khi đưa vào thuật toán K-Means với k = {k}.
               </p>
               <p>
-                <strong>Tâm cụm (Centroids):</strong> Tọa độ trung tâm được tính theo khoảng cách Euclid trong không gian 3 chiều gồm độ cao sóng trung vị (WVHT), chu kỳ sóng trội (DPD) và nhiệt độ mặt nước biển (WTMP).
+                <strong>Tâm cụm</strong> là trung tâm của nhóm trong không gian đặc trưng đã chuẩn hóa. Biểu đồ phân tán chỉ hiển thị hai trục độ cao và chu kỳ sóng.
               </p>
             </div>
           </div>

@@ -121,13 +121,21 @@ export async function getLatestWaveClassification(signal?: AbortSignal): Promise
   return row;
 }
 
-type ClusterRow = { model_id: number; date_hst: string; cluster_label: number; distance_to_centroid: number; centroid_features: Record<string, number> };
+type ClusterRow = {
+  model_id: number;
+  date_hst: string;
+  cluster_label: number;
+  distance_to_centroid: number;
+  median_wave_height_m?: number | null;
+  mean_dominant_period_s?: number | null;
+};
 type ProfileRow = { model_id: number; cluster_label: number; cluster_name: string | null; centroid_features: Record<string, number>; sample_count: number; created_at: string };
 type RawModel = Record<string, any>;
-export async function getClusteringSummary(): Promise<ClusteringSummary> {
-  const end = new Date().toISOString().slice(0, 10);
-  const start = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
-  const assignments = required(await api<Envelope<ClusterRow[]>>(`/clusters?start_hst=${start}&end_hst=${end}&limit=500`), 'phân cụm');
+export async function getClusteringSummary(endHST: string): Promise<ClusteringSummary> {
+  const firstDay = new Date(`${endHST}T00:00:00Z`);
+  firstDay.setUTCDate(firstDay.getUTCDate() - 60);
+  const start = firstDay.toISOString().slice(0, 10);
+  const assignments = required(await api<Envelope<ClusterRow[]>>(`/clusters?start_hst=${start}&end_hst=${endHST}&limit=500`), 'phân cụm');
   const modelId = assignments[0].model_id;
   const [profilesResponse, modelsResponse] = await Promise.all([
     api<Envelope<ProfileRow[]>>(`/clusters/profiles?model_id=${modelId}`),
@@ -150,11 +158,11 @@ export async function getClusteringSummary(): Promise<ClusteringSummary> {
         feature_name: name, label: name, original_value: value, z_score: value, unit: '',
       })),
     })),
-    assignments: assignments.map(row => ({ date_hst: row.date_hst, cluster_id: row.cluster_label,
+    assignments: assignments.filter(row => row.model_id === modelId).map(row => ({ date_hst: row.date_hst, cluster_id: row.cluster_label,
       cluster_label: profiles.find(p => p.cluster_label === row.cluster_label)?.cluster_name || `Cụm ${row.cluster_label}`,
       distance_to_centroid: row.distance_to_centroid,
-      wave_height_median_m: row.centroid_features?.wave_height_median_lag0 ?? null,
-      dominant_period_mean_s: row.centroid_features?.dominant_period_lag0 ?? null,
+      wave_height_median_m: row.median_wave_height_m ?? null,
+      dominant_period_mean_s: row.mean_dominant_period_s ?? null,
     })),
   };
 }
