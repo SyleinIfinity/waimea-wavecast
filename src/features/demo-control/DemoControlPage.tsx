@@ -73,7 +73,8 @@ export default function DemoControlPage() {
     try {
       setResetPreview(await previewObservationReset(adminToken));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      const message = reason instanceof Error ? reason.message : String(reason);
+      setError(message.includes('HTTP 401') ? 'Mã quản trị Backend không hợp lệ. Hãy dùng token production mới, rồi bấm xem trước lại.' : message);
     } finally {
       setResetBusy(false);
     }
@@ -318,10 +319,13 @@ export default function DemoControlPage() {
               onChange={(event) => setResetPassword(event.target.value)}
               className="w-full max-w-md rounded-lg border border-slate-700 bg-[#090d14] px-3 py-2 text-white" />
           </>}
-          <div><button type="button" onClick={handleObservationReset}
-            disabled={resetBusy || resetConfirmation !== (resetPreview.environment === 'production' ? 'RESET PRODUCTION OBSERVATIONS' : 'RESET LOCAL OBSERVATIONS') || (resetPreview.environment === 'production' && !resetPassword)}
-            className="rounded-lg bg-rose-700 px-4 py-2 font-semibold text-white disabled:opacity-40">Xóa trên DB {resetPreview.environment}</button></div>
         </div>}
+        <button type="button" onClick={handleObservationReset}
+          disabled={resetBusy || !resetPreview || resetConfirmation !== (resetPreview.environment === 'production' ? 'RESET PRODUCTION OBSERVATIONS' : 'RESET LOCAL OBSERVATIONS') || (resetPreview.environment === 'production' && !resetPassword)}
+          className="rounded-lg bg-rose-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">
+          Xóa dữ liệu quan trắc{resetPreview ? ` trên ${resetPreview.environment}` : ''}
+        </button>
+        {!resetPreview && <p className="text-[11px] text-slate-400">Nút xóa được mở sau khi mã quản trị hợp lệ và bước xem trước thành công.</p>}
         {resetMessage && <p role="status" className="text-xs text-emerald-300">{resetMessage}</p>}
       </section>
 

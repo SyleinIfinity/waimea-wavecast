@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Activity,
-  AlertCircle,
   AlertTriangle,
   Calendar,
   Clock,
@@ -9,7 +8,6 @@ import {
   Filter,
   Layers,
   RefreshCw,
-  ShieldCheck,
   TrendingUp,
   Waves,
   ChevronLeft,
@@ -18,6 +16,8 @@ import {
 } from 'lucide-react'
 import type { EChartsOption } from 'echarts'
 import EChart from '../../components/charts/EChart'
+import WaveClassificationPanel from '../classification/WaveClassificationPanel'
+import { hstToday } from '../data-quality/quality'
 import { getShadowForecasts } from '../../api/client'
 import type { ForecastHorizon, IssuedForecast } from '../../api/types'
 
@@ -31,8 +31,8 @@ const HORIZON_TITLES: Record<ForecastHorizon, { title: string; subtitle: string;
   },
   '1d': {
     title: 'Kỳ hạn 1 ngày',
-    subtitle: 'Trung vị ngày kế tiếp (HST)',
-    desc: 'Dự báo trung vị độ cao sóng của cả ngày lịch Hawaii tiếp theo.',
+    subtitle: 'Trung vị ngày mai (Hawaii)',
+    desc: 'Dự báo trung vị độ cao sóng của cả ngày mai theo giờ Hawaii.',
   },
   '7d': {
     title: 'Kỳ hạn ngày thứ 7',
@@ -164,9 +164,14 @@ function HorizonCard({
 
   const targetDescription = horizon === '30min'
     ? 'Mốc quan trắc tiếp theo'
-    : horizon === '30d'
-      ? `Kết thúc giai đoạn 30 ngày, ngày ${forecast?.target_date_hst || '—'} (Hawaii)`
-      : `Kết thúc ngày mục tiêu ${forecast?.target_date_hst || '—'} (Hawaii)`
+    : horizon === '1d'
+      ? `Bắt đầu ngày dự báo ${forecast?.target_date_hst || '—'} (Hawaii)`
+      : horizon === '30d'
+        ? `Kết thúc giai đoạn 30 ngày, ngày ${forecast?.target_date_hst || '—'} (Hawaii)`
+        : `Kết thúc ngày mục tiêu ${forecast?.target_date_hst || '—'} (Hawaii)`
+  const targetDisplayAt = forecast && horizon === '1d'
+    ? new Date(Date.parse(forecast.target_at) - 86_400_000).toISOString()
+    : forecast?.target_at ?? ''
 
   return (
     <div className="rounded-xl border border-slate-800 bg-[#0c121e] p-5 space-y-4 flex flex-col justify-between">
@@ -211,7 +216,7 @@ function HorizonCard({
             <div className="rounded-lg border border-sky-900/60 bg-sky-950/20 p-3">
               <span className="font-semibold text-sky-300">Mục tiêu dự đoán</span>
               <p className="mt-0.5 text-[11px] text-slate-400">{targetDescription}</p>
-              <ThreeZoneTime iso={forecast.target_at} />
+              <ThreeZoneTime iso={targetDisplayAt} />
             </div>
 
             {isEvaluated ? (
@@ -241,7 +246,9 @@ function HorizonCard({
             : loading ? 'Đang tải dữ liệu dự báo...'
               : horizon === '30min'
                 ? 'Chưa có dự báo. Cần đủ quan trắc đã kiểm định cho các mốc hiện tại, 30 phút, 1 giờ và 3 giờ trước.'
-                : 'Chưa có dự báo. Cần ít nhất 7 ngày Hawaii liên tiếp có dữ liệu đạt kiểm định để tạo đầu vào.'}
+                : horizon === '1d'
+                  ? 'Đang chờ dự báo cho ngày mai theo giờ Hawaii.'
+                  : 'Chưa có dự báo. Cần ít nhất 7 ngày Hawaii liên tiếp có dữ liệu đạt kiểm định để tạo đầu vào.'}
         </div>
       )}
 
@@ -313,17 +320,20 @@ export default function ForecastPage() {
     return () => controller.abort()
   }, [refreshKey])
 
-  // Lấy dự báo mới nhất cho 4 cards
+  const todayHST = hstToday()
   const latestByHorizon = useMemo(() => {
+    const tomorrow = new Date(`${todayHST}T00:00:00Z`)
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+    const targetDay = tomorrow.toISOString().slice(0, 10)
     const map: Partial<Record<ForecastHorizon, IssuedForecast>> = {}
     HORIZONS.forEach((h) => {
       const list = shadowForecasts[h]
-      if (list && list.length > 0) {
-        map[h] = list[0]
-      }
+      map[h] = h === '1d'
+        ? list.find(forecast => forecast.target_date_hst === targetDay && hstToday(new Date(forecast.issued_at)) === todayHST)
+        : list[0]
     })
     return map
-  }, [shadowForecasts])
+  }, [shadowForecasts, todayHST])
 
   // Lịch sử toàn bộ dự báo
   const allHistoryRows = useMemo(() => {
@@ -359,11 +369,13 @@ export default function ForecastPage() {
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-sky-400 uppercase tracking-wider mb-1">
             <TrendingUp size={15} />
-            <span>Mô hình Calisthenics 1.5 · Thử nghiệm &amp; Theo dõi ngầm</span>
+            <span>{activeTab === 'forecast' ? 'Mô hình Calisthenics 1.5 · Thử nghiệm & Theo dõi ngầm' : 'Phân loại cấp sóng theo ngày Hawaii'}</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Dự đoán và phân loại</h1>
           <p className="mt-1 text-xs text-slate-400 max-w-2xl">
-            Kết quả dự báo độ cao sóng thử nghiệm theo các kỳ hạn 30 phút, 1 ngày, 7 ngày và 30 ngày từ mô hình Calisthenics 1.5.
+            {activeTab === 'forecast'
+              ? 'Kết quả dự báo độ cao sóng thử nghiệm theo các kỳ hạn 30 phút, 1 ngày, 7 ngày và 30 ngày từ mô hình Calisthenics 1.5.'
+              : 'Kết quả phân nhóm độ cao sóng theo ngày.'}
           </p>
         </div>
 
@@ -410,12 +422,12 @@ export default function ForecastPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-800 bg-[#0c121e]">
         <DualTimeClock />
 
-        <div className="flex items-center gap-2">
+        {activeTab === 'forecast' && <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
             Trạng thái: Thử nghiệm / Đang theo dõi (DRAFT)
           </span>
           <span className="text-[11px] text-slate-400 font-mono">Nguồn: Calisthenics 1.5 Shadow</span>
-        </div>
+        </div>}
       </div>
 
       {/* ========================================================================= */}
@@ -602,34 +614,7 @@ export default function ForecastPage() {
       {/* ========================================================================= */}
       {/* TAB 2: PHÂN LOẠI */}
       {/* ========================================================================= */}
-      {activeTab === 'classification' && (
-        <div className="space-y-6">
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 space-y-4 text-center max-w-2xl mx-auto">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center mx-auto">
-              <AlertCircle size={24} />
-            </div>
-
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold text-white">Chưa có kết quả phân loại được kiểm chứng</h2>
-              <p className="text-xs text-amber-200/90 leading-relaxed max-w-lg mx-auto">
-                Hiện tại Backend chưa cấp quyền phát hành kết quả phân loại cấp sóng biển (Classification Scheme)
-                do các mô hình phân loại (RandomForestClassifier) đang trong quá trình hiệu chuẩn ngưỡng xác suất và kiểm định trên tập dữ liệu độc lập.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-lg bg-black/40 border border-amber-500/20 text-left text-xs text-slate-300 space-y-2">
-              <div className="flex items-center gap-2 text-amber-400 font-semibold">
-                <ShieldCheck size={16} />
-                <span>Quy tắc an toàn hải văn đồ án</span>
-              </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                Hệ thống tuân thủ nguyên tắc không tự ý quy đổi hay suy diễn mức độ an toàn khi bơi lội, lướt sóng hoặc ra khơi
-                chỉ dựa trên một thông số đơn lẻ như độ cao sóng WVHT mà không có mô hình phân loại được kiểm định chính thức.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === 'classification' && <WaveClassificationPanel refreshKey={refreshKey} />}
     </main>
   )
 }

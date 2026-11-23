@@ -96,6 +96,31 @@ export async function getShadowForecasts(horizon: ForecastHorizon, signal?: Abor
   return parseForecasts(await api<ForecastEnvelope>(`/forecasts/shadow/latest?${query}`, { signal }), 'shadow');
 }
 
+export type WaveClassification = {
+  model_id: number;
+  model_name: string;
+  model_version: string;
+  model_status: 'draft' | 'ready';
+  algorithm: string;
+  predicted_label: string;
+  target_date_hst: string;
+  issued_at: string;
+  feature_cutoff_date_hst: string;
+  evidence_mode: 'prospective' | 'retrospective';
+};
+
+export async function getLatestWaveClassification(signal?: AbortSignal): Promise<WaveClassification | null> {
+  const result = await api<Envelope<WaveClassification | null>>('/classifications/latest?include_draft=true', { signal });
+  if (result.status === 'empty' && result.data === null) return null;
+  const row = required(result, 'phân loại cấp sóng');
+  if (!Number.isInteger(row.model_id) || !['draft', 'ready'].includes(row.model_status) ||
+      !['prospective', 'retrospective'].includes(row.evidence_mode) ||
+      typeof row.predicted_label !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(row.target_date_hst)) {
+    throw new Error('Backend trả về bản ghi phân loại không hợp lệ.');
+  }
+  return row;
+}
+
 type ClusterRow = { model_id: number; date_hst: string; cluster_label: number; distance_to_centroid: number; centroid_features: Record<string, number> };
 type ProfileRow = { model_id: number; cluster_label: number; cluster_name: string | null; centroid_features: Record<string, number>; sample_count: number; created_at: string };
 type RawModel = Record<string, any>;
