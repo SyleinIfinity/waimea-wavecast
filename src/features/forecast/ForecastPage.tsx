@@ -17,6 +17,7 @@ import {
 import type { EChartsOption } from 'echarts'
 import EChart from '../../components/charts/EChart'
 import WaveClassificationPanel from '../classification/WaveClassificationPanel'
+import { ClusterScatterPanel } from '../clustering/ClusterScatterChart'
 import { hstToday } from '../data-quality/quality'
 import { getShadowForecasts } from '../../api/client'
 import type { ForecastHorizon, IssuedForecast } from '../../api/types'
@@ -614,7 +615,12 @@ export default function ForecastPage() {
       {/* ========================================================================= */}
       {/* TAB 2: PHÂN LOẠI */}
       {/* ========================================================================= */}
-      {activeTab === 'classification' && <WaveClassificationPanel refreshKey={refreshKey} />}
+      {activeTab === 'classification' && (
+        <div className="space-y-4">
+          <ClusterScatterPanel refreshKey={refreshKey} />
+          <WaveClassificationPanel refreshKey={refreshKey} />
+        </div>
+      )}
     </main>
   )
 }

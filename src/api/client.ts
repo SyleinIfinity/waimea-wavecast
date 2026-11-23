@@ -131,15 +131,15 @@ type ClusterRow = {
 };
 type ProfileRow = { model_id: number; cluster_label: number; cluster_name: string | null; centroid_features: Record<string, number>; sample_count: number; created_at: string };
 type RawModel = Record<string, any>;
-export async function getClusteringSummary(endHST: string): Promise<ClusteringSummary> {
+export async function getClusteringSummary(endHST: string, signal?: AbortSignal): Promise<ClusteringSummary> {
   const firstDay = new Date(`${endHST}T00:00:00Z`);
   firstDay.setUTCDate(firstDay.getUTCDate() - 60);
   const start = firstDay.toISOString().slice(0, 10);
-  const assignments = required(await api<Envelope<ClusterRow[]>>(`/clusters?start_hst=${start}&end_hst=${endHST}&limit=500`), 'phân cụm');
+  const assignments = required(await api<Envelope<ClusterRow[]>>(`/clusters?start_hst=${start}&end_hst=${endHST}&limit=500`, { signal }), 'phân cụm');
   const modelId = assignments[0].model_id;
   const [profilesResponse, modelsResponse] = await Promise.all([
-    api<Envelope<ProfileRow[]>>(`/clusters/profiles?model_id=${modelId}`),
-    api<Envelope<RawModel[]>>('/models?task_type=clustering'),
+    api<Envelope<ProfileRow[]>>(`/clusters/profiles?model_id=${modelId}`, { signal }),
+    api<Envelope<RawModel[]>>('/models?task_type=clustering', { signal }),
   ]);
   const profiles = required(profilesResponse, 'tâm cụm');
   const model = modelsResponse.data.find(item => item.model_id === modelId);
